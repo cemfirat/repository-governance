@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate JSON syntax
         run: jq empty rulesets/*.json
@@ -44,3 +44,6 @@ jobs:
 
       - name: Validate shell syntax
         run: bash -n scripts/apply-rulesets.sh
+
+      - name: Exercise dry-run without GitHub authentication
+        run: bash scripts/apply-rulesets.sh example/repository --dry-run >/dev/null
