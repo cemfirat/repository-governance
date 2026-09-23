@@ -1,0 +1,46 @@
+name: Validate governance files
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate ruleset templates and script
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: jq empty rulesets/*.json
+
+      - name: Validate hard guardrails policy
+        run: |
+          jq -e '
+            .enforcement == "active" and
+            .target == "branch" and
+            .conditions.ref_name.include == ["refs/heads/main"] and
+            (.bypass_actors | length) == 0 and
+            ([.rules[].type] | sort) == (["deletion", "non_fast_forward"] | sort)
+          ' rulesets/main-protection-hard-guardrails.json
+
+      - name: Validate merge gates base policy
+        run: |
+          jq -e '
+            .enforcement == "active" and
+            .target == "branch" and
+            .conditions.ref_name.include == ["refs/heads/main"] and
+            ([.bypass_actors[].actor_id] | sort) == ([2, 5] | sort) and
+            any(.rules[]; .type == "pull_request") and
+            (all(.rules[]; .type != "deletion" and .type != "non_fast_forward"))
+          ' rulesets/main-protection-merge-gates-base.json
+
+      - name: Validate shell syntax
+        run: bash -n scripts/apply-rulesets.sh
