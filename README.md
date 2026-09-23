@@ -108,4 +108,4 @@ Small, focused pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-No open-source license has been selected yet. Public visibility alone does not grant reuse rights.
+Licensed under the [MIT License](LICENSE).
