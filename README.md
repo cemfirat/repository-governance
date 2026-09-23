@@ -1,80 +1,111 @@
 # Repository Governance
 
-Zentrale Vorlagen und Hilfsmittel fuer die GitHub-Repository-Schutzregeln.
+Reusable GitHub ruleset templates and a small GitHub CLI helper for protecting a repository's `main` branch.
 
-## Struktur
+The policy is intentionally split into two rulesets:
+
+- **Hard guardrails** protect `main` from deletion and force-pushes with **no bypass actors**.
+- **Merge gates** require pull requests and can optionally require repository-specific CI checks. The built-in `Maintain` and `Repository admin` roles may bypass these merge gates.
+
+Keeping destructive protections separate from merge bypasses prevents an emergency merge bypass from also allowing deletion or force-pushes on `main`.
+
+## Repository layout
 
 - `rulesets/main-protection-hard-guardrails.json`  
-  Nicht umgehbarer Schutz fuer `main`: kein Loeschen, keine Force-Pushes.
+  Non-bypassable deletion and force-push protection for `main`.
 
 - `rulesets/main-protection-merge-gates-base.json`  
-  PR-Gate fuer `main` mit `Maintain` und `Repository admin` als `Always allow`-Bypass.  
-  Repository-spezifische CI-Checks werden absichtlich nicht fest in der Vorlage gespeichert.
+  Pull-request gate for `main`. Repository-specific required status checks are intentionally omitted from the base template.
 
 - `scripts/apply-rulesets.sh`  
-  Wendet beide Vorlagen ueber die GitHub CLI auf ein neues Repository an.
+  Applies both templates with the GitHub CLI and can add required status checks at creation time.
 
-## Neues Repository absichern
+- `.github/workflows/validate.yml`  
+  Validates the templates and helper script on pull requests and pushes to `main`.
 
-Voraussetzungen:
+## Requirements
 
-1. Das neue Repository besitzt bereits einen `main`-Branch.
-2. `gh` und `jq` sind installiert.
-3. GitHub CLI ist angemeldet: `gh auth login`.
-4. Falls CI-Checks verpflichtend werden sollen, CI mindestens einmal ausfuehren, damit die Check-Namen feststehen.
+- Bash
+- `jq`
+- GitHub CLI (`gh`) for live changes
+- A GitHub account and repository plan that supports the rules you intend to use
+- An existing `main` branch in the target repository
 
-Ohne CI-Checks:
+Authenticate the GitHub CLI before making live changes:
 
 ```bash
-./scripts/apply-rulesets.sh cemfirat/NEUES-REPO
+gh auth login
 ```
 
-Mit verpflichtenden Checks:
+If you want to make CI checks required, run CI at least once in the target repository so the check names are known.
+
+## Usage
+
+Preview the payloads without contacting GitHub:
 
 ```bash
-./scripts/apply-rulesets.sh cemfirat/NEUES-REPO \
+bash scripts/apply-rulesets.sh OWNER/REPO --dry-run
+```
+
+Create the two base rulesets:
+
+```bash
+bash scripts/apply-rulesets.sh OWNER/REPO
+```
+
+Create them and require one or more status checks:
+
+```bash
+bash scripts/apply-rulesets.sh OWNER/REPO \
   --check "Build, typecheck and test" \
   --check "Smoke test"
 ```
 
-Wenn vor dem Merge alle PR-Unterhaltungen aufgeloest sein sollen:
+Also require all pull-request conversations to be resolved:
 
 ```bash
-./scripts/apply-rulesets.sh cemfirat/NEUES-REPO \
+bash scripts/apply-rulesets.sh OWNER/REPO \
   --require-conversation-resolution \
   --check "CI"
 ```
 
-Nur anzeigen, was gesendet wuerde:
+The helper refuses to continue when either standard ruleset name already exists, so it does not silently create duplicates.
 
-```bash
-./scripts/apply-rulesets.sh cemfirat/NEUES-REPO --dry-run
-```
+## Policy details
 
-## Schutzmodell
+### `main protection - hard guardrails`
 
-### main protection - hard guardrails
+- targets only `refs/heads/main`
+- blocks branch deletion
+- blocks non-fast-forward updates / force-pushes
+- contains no bypass actors
 
-- nur `main`
-- Branch-Loeschung blockiert
-- Force-Push blockiert
-- keine Bypass-Akteure
+### `main protection - merge gates`
 
-### main protection - merge gates
+- targets only `refs/heads/main`
+- requires a pull request
+- allows `Maintain` to bypass the merge gate
+- allows `Repository admin` to bypass the merge gate
+- contains no deletion or force-push rule
+- can include repository-specific required status checks
+- requires the branch to be up to date when status checks are supplied
 
-- nur `main`
-- Pull Request erforderlich
-- `Maintain` -> `Always allow`
-- `Repository admin` -> `Always allow`
-- keine Loesch-/Force-Push-Regeln in diesem Ruleset
-- optionale, repository-spezifische Pflichtchecks
+The base template uses **0 required approvals**. It requires the pull-request path, but not an independent reviewer approval. Adjust that policy if your repository needs mandatory review.
 
-Die Trennung ist absichtlich: Ein Merge-Bypass darf nicht gleichzeitig das Loeschen oder Force-Pushen von `main` erlauben.
+Conversation resolution is off in the base template and can be enabled with `--require-conversation-resolution`.
 
-## Dieses Repository
+## Safety
 
-Die Dateien werden bei Pull Requests und auf `main` automatisch validiert. Nach Aenderungen an den Vorlagen sollte immer geprueft werden, dass beide Rulesets weiterhin exakt dem oben beschriebenen Modell entsprechen.
+The helper performs preflight checks before writing rulesets and attempts to roll back the hard-guardrail ruleset if creation of the merge-gate ruleset fails.
 
-## Sichtbarkeit
+Always review the generated payload with `--dry-run` before applying it to a repository you do not control.
 
-Die Vorlagen enthalten keine Secrets. Das Repository kann daher technisch oeffentlich sein. Wenn hier spaeter interne Governance-Dokumente, private Organisationsdetails oder weitere betriebliche Informationen abgelegt werden, ist `Private` die sinnvollere Einstellung.
+Do not store tokens, credentials, private keys, customer data, or internal-only operational details in this repository.
+
+## Contributing
+
+Small, focused pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+No open-source license has been selected yet. Public visibility alone does not grant reuse rights.
