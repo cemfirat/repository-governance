@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Repository Governance logo" width="120" />
+  <img src="assets/brand-banner.webp" alt="Cem Firat creative consultancy artwork" width="900" />
 </p>
 
 <h1 align="center">Repository Governance</h1>
