@@ -1,6 +1,12 @@
-# Repository Governance
+<p align="center">
+  <img src="assets/logo.svg" alt="Repository Governance logo" width="120" />
+</p>
 
-Reusable GitHub ruleset templates and a small GitHub CLI helper for protecting a repository's `main` branch.
+<h1 align="center">Repository Governance</h1>
+
+<p align="center">
+  Reusable GitHub ruleset templates and a small GitHub CLI helper for protecting a repository's <code>main</code> branch.
+</p>
 
 The policy is intentionally split into two rulesets:
 
