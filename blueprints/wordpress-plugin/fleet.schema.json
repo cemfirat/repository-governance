@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cem Firat WordPress Plugin Fleet Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "blueprint",
+    "target_blueprint_version",
+    "repositories"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "blueprint": {
+      "const": "wordpress-plugin"
+    },
+    "target_blueprint_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repository",
+          "default_branch",
+          "desired_profile",
+          "rollout"
+        ],
+        "properties": {
+          "repository": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+          },
+          "default_branch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "desired_profile": {
+            "enum": [
+              "simple",
+              "application",
+              "block"
+            ]
+          },
+          "rollout": {
+            "enum": [
+              "planned",
+              "enrolled",
+              "paused"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
