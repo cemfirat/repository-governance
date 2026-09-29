@@ -94,7 +94,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "channel"
+        "channel",
+        "updates"
       ],
       "properties": {
         "channel": {
@@ -107,6 +108,13 @@
         "update_uri": {
           "type": "string",
           "format": "uri"
+        },
+        "updates": {
+          "enum": [
+            "none",
+            "wordpress.org",
+            "github-release-updater"
+          ]
         }
       },
       "allOf": [
