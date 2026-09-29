@@ -137,6 +137,7 @@ class BlueprintTests(unittest.TestCase):
             },
             "distribution": {
                 "channel": "github-releases",
+                "updates": "none",
                 "update_uri": (
                     "https://github.com/cemfirat/example-plugin"
                 ),
@@ -261,6 +262,20 @@ class BlueprintTests(unittest.TestCase):
                 encoding="utf-8"
             ),
         )
+
+    def test_invalid_distribution_update_combination_is_rejected(self):
+        manifest_path = self.plugin / ".ccf-wordpress-plugin.json"
+        manifest = json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )
+        manifest["distribution"]["updates"] = "wordpress.org"
+        manifest_path.write_text(
+            json.dumps(manifest),
+            encoding="utf-8",
+        )
+
+        with self.assertRaises(blueprint.BlueprintError):
+            blueprint.audit(self.plugin, self.gov)
 
     def test_path_escape_is_rejected(self):
         manifest_path = self.plugin / ".ccf-wordpress-plugin.json"
