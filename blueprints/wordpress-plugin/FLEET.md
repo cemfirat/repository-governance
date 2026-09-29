@@ -80,11 +80,10 @@ The next layer may turn a plan into pull-request proposals, but it must preserve
 
 A write-capable orchestrator is not part of the current fleet planner.
 
-## Expected initial state
+## Current rollout model
 
-At the time the inventory was introduced:
+Blueprint `0.2.0` introduces explicit package-root and license-mode support. The fleet target is therefore advanced to `0.2.0` only after the implementation is reviewed.
 
-- `wordpress-widget-custom-css-classes` is enrolled at blueprint `0.1.0` with profile `simple`;
-- the other five inventoried repositories do not yet contain a blueprint manifest and should therefore plan as `unenrolled`.
+Repositories already enrolled at `0.1.0` should then appear as `version-drift` until each receives its own focused upgrade PR. That drift is intentional: a blueprint contract change must never be consumed silently.
 
-This state was verified against GitHub before enabling fleet rollout work.
+Planned repositories remain `unenrolled` until their baseline metadata has been reviewed. In particular, nested-package and nonstandard-license repositories must use the new explicit model rather than being coerced into the root-level GPL baseline.
