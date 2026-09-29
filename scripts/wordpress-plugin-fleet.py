@@ -352,8 +352,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--token-env",
-        default="GITHUB_TOKEN",
-        help="Environment variable containing an optional GitHub token.",
+        default="CCF_FLEET_GITHUB_TOKEN",
+        help=(
+            "Environment variable containing an optional cross-repository "
+            "read token. Public repositories need no token."
+        ),
     )
     parser.add_argument("--timeout", type=float, default=10.0)
     return parser
