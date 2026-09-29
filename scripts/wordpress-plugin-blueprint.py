@@ -647,7 +647,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="text",
     )
 
-    sub = parser.add_subpar(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True)
 
     audit_parser = sub.add_parser(
         "audit",
