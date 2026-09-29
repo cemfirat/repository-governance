@@ -16,11 +16,12 @@ The manifest deliberately contains values that are expensive to infer safely:
 
 - stable slug
 - display name
-- main plugin file
+- optional package root inside the repository
+- main plugin file relative to that package root
 - version
 - text domain
 - minimum WordPress/PHP versions
-- license policy
+- explicit license mode and declared license metadata
 - distribution channel
 - update strategy (separate from `Update URI`)
 - optional capabilities
@@ -42,9 +43,11 @@ A GitHub `Update URI` header is validated as identity/protection metadata, but t
 
 Profiles define:
 
-- required baseline files;
-- recommended files;
-- exact-managed file mappings;
+- repository-level required baseline files;
+- package-level required files resolved below `plugin.root`;
+- recommended repository files;
+- exact-managed mappings with repository/package scope;
+- optional license-mode conditions for managed content;
 - profile-specific guidance.
 
 A profile does not dictate internal PHP classes or folder structure beyond what the profile genuinely needs.
@@ -55,8 +58,10 @@ Exact-managed files are canonical and safe to replace byte-for-byte.
 
 The initial set is intentionally small:
 
-- shared `assets/logo.svg`;
-- GPL v2 license text for plugins declaring `GPL-2.0-or-later`.
+- shared repository-level `assets/logo.svg`;
+- package-level GPL v2 license text only for manifests using `license_mode: managed-gpl`.
+
+A manifest using `license_mode: declared` keeps licensing under plugin ownership. The blueprint validates the declaration but does not create, replace or reinterpret the license file.
 
 More files can be added only when overwriting them cannot erase product-specific content.
 
@@ -64,14 +69,15 @@ More files can be added only when overwriting them cannot erase product-specific
 
 The audit checks:
 
-- required baseline files;
-- exact-managed drift;
+- repository-level and package-level required files;
+- package-root path safety;
+- exact-managed drift with scope-aware target resolution;
 - canonical README banner;
 - main plugin header versus manifest;
 - plugin description length;
 - GitHub update URI where applicable;
-- `readme.txt` metadata versus manifest;
-- GPL license presence/content;
+- package `readme.txt` metadata and declared license versus manifest;
+- canonical GPL license presence/content only when `managed-gpl` is selected;
 - changelog entry for the current version.
 
 The audit uses the Python standard library only.
@@ -102,6 +108,16 @@ Future orchestrator responsibilities:
 9. leave merge decisions to normal repository policy.
 
 The orchestrator must not push directly to protected `main`.
+
+## Repository root versus package root
+
+The path given to the audit command is always the **repository root** containing `.ccf-wordpress-plugin.json`.
+
+`plugin.root` identifies the installable WordPress package inside that repository and defaults to `.`. Package metadata such as the main PHP file, WordPress `readme.txt` and package-scoped managed files resolve below this path.
+
+Repository presentation and governance files remain repository-scoped. This avoids forcing repositories such as connector projects to move their installable WordPress package to the repository root.
+
+Both `plugin.root` and all profile-managed paths are validated as relative paths and may not escape the repository.
 
 ## Blueprint versioning
 
@@ -134,7 +150,9 @@ This makes CI failures actionable rather than ambiguous.
 ## Security boundaries
 
 - paths in the manifest/profile must remain relative and may not escape the repository;
-- sync writes only files explicitly listed as exact-managed;
+- package-root resolution must remain inside the repository;
+- sync writes only files explicitly listed as exact-managed and only in their declared scope;
+- declared-license mode must never cause the blueprint to create or overwrite a license file;
 - no credentials are stored in the blueprint;
 - cross-repository writes require a separate authenticated mechanism and are not part of the local audit tool;
 - required GitHub Actions should use least privilege and pinned third-party action revisions.
