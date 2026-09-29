@@ -14,7 +14,7 @@
       "repository": "cemfirat/wordpress-doctype-Inserter",
       "default_branch": "main",
       "desired_profile": "simple",
-      "rollout": "planned"
+      "rollout": "enrolled"
     },
     {
       "repository": "cemfirat/wordpress-at-head-tag",
