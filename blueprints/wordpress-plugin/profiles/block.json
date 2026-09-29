@@ -5,8 +5,7 @@
     ".ccf-wordpress-plugin.json",
     ".gitignore",
     "README.md",
-    "CHANGELOG.md",
-    "assets/logo.svg"
+    "CHANGELOG.md"
   ],
   "package_required_files": [
     "readme.txt",
