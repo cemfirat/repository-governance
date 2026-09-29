@@ -1,0 +1,23 @@
+name: CCF WordPress Plugin Blueprint Audit
+description: Audit a WordPress plugin repository against the Cem Firat shared blueprint.
+
+inputs:
+  plugin-root:
+    description: Path to the plugin checkout to audit.
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Audit WordPress plugin blueprint
+      shell: bash
+      env:
+        CCF_ACTION_PATH: ${{ github.action_path }}
+        CCF_PLUGIN_ROOT: ${{ inputs.plugin-root }}
+      run: |
+        set -euo pipefail
+        python3 "$CCF_ACTION_PATH/../../scripts/wordpress-plugin-blueprint.py" \
+          --governance-root "$CCF_ACTION_PATH/../.." \
+          audit \
+          --plugin-root "$CCF_PLUGIN_ROOT"
