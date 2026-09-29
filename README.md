@@ -38,6 +38,12 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 - `scripts/wordpress-plugin-blueprint.py`  
   Audits enrolled plugin repositories and synchronizes only explicitly exact-managed files.
 
+- `scripts/wordpress-plugin-scaffold.py`  
+  Creates a new simple or application WordPress plugin baseline from the same blueprint metadata and validates it before exposing the generated directory.
+
+- `scripts/wordpress-plugin-fleet.py` / `wordpress-plugin-upgrade-plan.py` / `wordpress-plugin-pr-orchestrator.py`  
+  Plan and propagate reviewed blueprint upgrades across enrolled plugin repositories without writing directly to protected `main`.
+
 ## Requirements
 
 - Bash
