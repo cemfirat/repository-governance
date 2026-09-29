@@ -353,6 +353,28 @@ def scaffold_plugin(
             f"profile must be one of {SUPPORTED_SCAFFOLD_PROFILES} or block"
         )
 
+    if not isinstance(name, str) or not name.strip():
+        raise ScaffoldError("name must not be empty")
+    name = name.strip()
+    if not isinstance(author, str) or not author.strip():
+        raise ScaffoldError("author must not be empty")
+    author = author.strip()
+    if not re.fullmatch(
+        r"^\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$",
+        version,
+    ):
+        raise ScaffoldError(
+            "version must use a WordPress-compatible numeric version"
+        )
+    for field_name, value in (
+        ("minimum_wordpress", minimum_wordpress),
+        ("minimum_php", minimum_php),
+    ):
+        if not re.fullmatch(r"^\\d+\\.\\d+(?:\\.\\d+)?$", value):
+            raise ScaffoldError(
+                f"{field_name} must use a numeric version such as 6.5 or 8.0"
+            )
+
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
         raise ScaffoldError(
             "slug must contain lowercase letters, numbers and single hyphens only"
@@ -560,7 +582,12 @@ def scaffold_plugin(
             render_workflow(action_sha),
         )
 
-        audit_result = blueprint.audit(temp_root, governance_root)
+        try:
+            audit_result = blueprint.audit(temp_root, governance_root)
+        except blueprint.BlueprintError as exc:
+            raise ScaffoldError(
+                f"generated scaffold is invalid: {exc}"
+            ) from exc
         if audit_result.get("status") != "clean":
             raise ScaffoldError(
                 "generated scaffold failed blueprint audit: "
@@ -675,11 +702,8 @@ def main(argv: list[str] | None = None) -> int:
             main_file=args.main_file,
             playground_preview=args.playground_preview,
         )
-    except (ScaffoldError, Exception) as exc:
-        if isinstance(exc, ScaffoldError):
-            message = str(exc)
-        else:
-            message = str(exc)
+    except ScaffoldError as exc:
+        message = str(exc)
         if args.format == "json":
             print(json.dumps({"status": "error", "error": message}, indent=2))
         else:
