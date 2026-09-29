@@ -18,6 +18,18 @@ Implication:
 - the blueprint must compare manifest values to the plugin header;
 - minimum versions should be chosen from actual code requirements, not copied from another plugin.
 
+### `Update URI` is not an external updater
+
+WordPress introduced the `Update URI` header so externally distributed plugins can avoid being accidentally overwritten by a similarly named WordPress.org plugin. A non-WordPress.org URI causes the normal WordPress.org update lookup to ignore the plugin unless code handles the dynamic external update filter.
+
+Source: https://make.wordpress.org/core/2021/06/29/introducing-update-uri-plugin-header-in-wordpress-5-8/
+
+Implication:
+
+- record the `Update URI` independently from the actual update strategy;
+- never claim that a GitHub URL in the header enables GitHub updates;
+- require an explicit updater implementation and tests before a plugin manifest declares automatic GitHub release updates.
+
 ### `readme.txt` is a separate distribution/documentation surface
 
 WordPress documents the plugin directory readme format separately. Since WordPress 5.8, runtime requirements are no longer taken from `readme.txt`; they come from the main plugin file.
