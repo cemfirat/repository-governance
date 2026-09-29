@@ -21,6 +21,15 @@ jobs:
       - name: Validate JSON syntax
         run: jq empty rulesets/*.json
 
+      - name: Validate WordPress blueprint JSON syntax
+        run: find blueprints/wordpress-plugin -name '*.json' -print0 | xargs -0 -r -n1 jq empty
+
+      - name: Validate WordPress blueprint Python syntax
+        run: python3 -m py_compile scripts/wordpress-plugin-blueprint.py tests/test_wordpress_plugin_blueprint.py
+
+      - name: Run WordPress blueprint unit tests
+        run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_blueprint.py' -v
+
       - name: Validate hard guardrails policy
         run: |
           jq -e '
