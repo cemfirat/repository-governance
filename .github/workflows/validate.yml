@@ -25,10 +25,15 @@ jobs:
         run: find blueprints/wordpress-plugin -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 
       - name: Validate WordPress blueprint Python syntax
-        run: python3 -m py_compile scripts/wordpress-plugin-blueprint.py tests/test_wordpress_plugin_blueprint.py
+        run: >-
+          python3 -m py_compile
+          scripts/wordpress-plugin-blueprint.py
+          scripts/wordpress-plugin-fleet.py
+          tests/test_wordpress_plugin_blueprint.py
+          tests/test_wordpress_plugin_fleet.py
 
       - name: Run WordPress blueprint unit tests
-        run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_blueprint.py' -v
+        run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_*.py' -v
 
       - name: Validate hard guardrails policy
         run: |

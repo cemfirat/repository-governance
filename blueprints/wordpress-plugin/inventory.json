@@ -1,0 +1,44 @@
+{
+  "$schema": "./fleet.schema.json",
+  "schema_version": 1,
+  "blueprint": "wordpress-plugin",
+  "target_blueprint_version": "0.1.0",
+  "repositories": [
+    {
+      "repository": "cemfirat/ccf-sites-ads-wordpress-connector",
+      "default_branch": "main",
+      "desired_profile": "application",
+      "rollout": "planned"
+    },
+    {
+      "repository": "cemfirat/wordpress-doctype-Inserter",
+      "default_branch": "main",
+      "desired_profile": "simple",
+      "rollout": "planned"
+    },
+    {
+      "repository": "cemfirat/wordpress-at-head-tag",
+      "default_branch": "main",
+      "desired_profile": "simple",
+      "rollout": "planned"
+    },
+    {
+      "repository": "cemfirat/wordpress-calendar-booking",
+      "default_branch": "main",
+      "desired_profile": "application",
+      "rollout": "planned"
+    },
+    {
+      "repository": "cemfirat/wordpress-project-management",
+      "default_branch": "main",
+      "desired_profile": "application",
+      "rollout": "planned"
+    },
+    {
+      "repository": "cemfirat/wordpress-widget-custom-css-classes",
+      "default_branch": "main",
+      "desired_profile": "simple",
+      "rollout": "enrolled"
+    }
+  ]
+}
