@@ -126,6 +126,12 @@ python3 scripts/wordpress-plugin-blueprint.py \
 
 `sync-exact --write` is intentionally narrow. It does not edit README prose, plugin source, changelogs, tests, or any other plugin-specific content.
 
+## Fleet inventory and planning
+
+The canonical repository inventory and read-only propagation plan are documented in [FLEET.md](FLEET.md).
+
+The fleet planner detects enrollment/profile/version drift across WordPress plugin repositories without modifying them. Cross-repository write automation is deliberately a later layer.
+
 ## Update propagation
 
 A blueprint change does **not** write directly to every plugin's `main` branch.
