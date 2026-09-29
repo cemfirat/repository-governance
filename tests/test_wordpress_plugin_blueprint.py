@@ -453,6 +453,32 @@ class BlueprintTests(unittest.TestCase):
         with self.assertRaises(blueprint.BlueprintError):
             blueprint.audit(self.plugin, self.gov)
 
+    def test_cli_parser_accepts_audit_command(self):
+        args = blueprint.build_parser().parse_args(
+            [
+                "--governance-root",
+                str(self.gov),
+                "audit",
+                "--plugin-root",
+                str(self.plugin),
+            ]
+        )
+        self.assertEqual("audit", args.command)
+        self.assertEqual(self.gov, args.governance_root)
+        self.assertEqual(self.plugin, args.plugin_root)
+
+    def test_cli_main_runs_clean_audit(self):
+        exit_code = blueprint.main(
+            [
+                "--governance-root",
+                str(self.gov),
+                "audit",
+                "--plugin-root",
+                str(self.plugin),
+            ]
+        )
+        self.assertEqual(0, exit_code)
+
 
 if __name__ == "__main__":
     unittest.main()
