@@ -22,9 +22,21 @@ The manifest deliberately contains values that are expensive to infer safely:
 - minimum WordPress/PHP versions
 - license policy
 - distribution channel
+- update strategy (separate from `Update URI`)
 - optional capabilities
 
 This gives audit/sync tooling an explicit contract.
+
+### Distribution and updates
+
+Distribution and automatic update delivery are separate concerns.
+
+A plugin may publish release ZIPs on GitHub while having no automatic WordPress update mechanism. The manifest therefore records both:
+
+- `distribution.channel` — where releases are published;
+- `distribution.updates` — how WordPress discovers/installs updates.
+
+A GitHub `Update URI` header is validated as identity/protection metadata, but the blueprint must not treat it as proof that automatic GitHub updates are implemented.
 
 ### 2. Profile
 
