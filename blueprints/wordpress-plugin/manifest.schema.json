@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cemfirat/repository-governance/blob/main/blueprints/wordpress-plugin/manifest.schema.json",
+  "title": "Cem Firat WordPress Plugin Blueprint Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "blueprint",
+    "blueprint_version",
+    "profile",
+    "plugin",
+    "distribution",
+    "features"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "blueprint": {
+      "const": "wordpress-plugin"
+    },
+    "blueprint_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "profile": {
+      "enum": [
+        "simple",
+        "application",
+        "block"
+      ]
+    },
+    "plugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slug",
+        "name",
+        "main_file",
+        "version",
+        "text_domain",
+        "minimum_wordpress",
+        "minimum_php",
+        "author",
+        "license",
+        "license_header"
+      ],
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "main_file": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.php$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$"
+        },
+        "text_domain": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "minimum_wordpress": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?$"
+        },
+        "minimum_php": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?$"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "license": {
+          "enum": [
+            "GPL-2.0-or-later"
+          ]
+        },
+        "license_header": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channel"
+      ],
+      "properties": {
+        "channel": {
+          "enum": [
+            "github-releases",
+            "wordpress.org",
+            "none"
+          ]
+        },
+        "update_uri": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "channel": {
+                "const": "github-releases"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "update_uri"
+            ]
+          }
+        }
+      ]
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "block_plugin",
+        "playground_preview"
+      ],
+      "properties": {
+        "block_plugin": {
+          "type": "boolean"
+        },
+        "playground_preview": {
+          "type": "boolean"
+        }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule",
+          "reason"
+        ],
+        "properties": {
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
