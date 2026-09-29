@@ -153,7 +153,22 @@ Observed inconsistency:
 - some repositories are missing a full license or WordPress-style readme;
 - CI/release depth differs substantially;
 - repository identity/version/update conventions are not yet encoded in a machine-readable manifest;
-- common files are copied, so there is no reliable drift detection.
+- common files are copied, so there is no reliable drift detection;
+- `ccf-sites-ads-wordpress-connector` keeps the installable plugin under `wordpress/`, proving that repository root and package root cannot always be treated as the same path;
+- the connector and project-management repositories also demonstrate that licensing must be modeled explicitly rather than copied from the GPL-based public utility plugins.
+
+### Internal package-root and licensing conclusion
+
+The blueprint must distinguish repository governance from installable package layout.
+
+Result:
+
+- `plugin.root` is an optional relative package root, defaulting to `.`;
+- WordPress runtime metadata resolves below the package root;
+- repository README/branding/changelog remain repository-scoped;
+- `managed-gpl` permits canonical GPL file synchronization;
+- `declared` preserves an existing nonstandard license declaration and prevents license-file synchronization;
+- no migration may change a plugin's license as a side effect of blueprint enrollment.
 
 ## Resulting blueprint decisions
 
@@ -166,3 +181,5 @@ Observed inconsistency:
 7. Delegate block scaffolding to **`@wordpress/create-block`**.
 8. Add Plugin Check and Playground only where they provide concrete value.
 9. Do not make a check required until it has been proven stable on a branch.
+10. Distinguish repository root from installable package root.
+11. Treat licensing as explicit plugin metadata; never normalize a plugin to GPL automatically.

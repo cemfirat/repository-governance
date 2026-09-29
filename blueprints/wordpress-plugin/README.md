@@ -4,7 +4,7 @@ The WordPress Plugin Blueprint is the shared source of truth for public WordPres
 
 It is deliberately **not** a single rigid PHP boilerplate. A small utility plugin, a large WordPress application, and a block plugin have different technical needs. The blueprint standardizes the parts that should be consistent across all of them: repository identity, branding, metadata, licensing, baseline validation, packaging/release policy, and controlled propagation of shared updates.
 
-Current blueprint version: **0.1.0 (draft)**
+Current blueprint version: **0.2.0 (draft)**
 
 ## Goals
 
@@ -35,10 +35,10 @@ These are safe to synchronize byte-for-byte from `repository-governance`.
 
 Initial examples:
 
-- `assets/logo.svg`
-- the full GPL v2 license text when the manifest declares `GPL-2.0-or-later`
+- repository-level `assets/logo.svg`
+- package-level GPL v2 `LICENSE` when the manifest uses `license_mode: managed-gpl`
 
-`sync-exact` may update only these files.
+`sync-exact` may update only these files. Package-scoped managed files are resolved below the declared plugin package root, while repository branding remains at the repository root.
 
 ### Validated files
 
@@ -67,9 +67,10 @@ Example:
 {
   "schema_version": 1,
   "blueprint": "wordpress-plugin",
-  "blueprint_version": "0.1.0",
+  "blueprint_version": "0.2.0",
   "profile": "simple",
   "plugin": {
+    "root": ".",
     "slug": "example-plugin",
     "name": "Example Plugin",
     "main_file": "example-plugin.php",
@@ -78,6 +79,7 @@ Example:
     "minimum_wordpress": "6.5",
     "minimum_php": "8.0",
     "author": "Cem Firat",
+    "license_mode": "managed-gpl",
     "license": "GPL-2.0-or-later",
     "license_header": "GPL-2.0-or-later"
   },
@@ -94,6 +96,29 @@ Example:
 ```
 
 The JSON Schema is in [`manifest.schema.json`](manifest.schema.json).
+
+### Package root
+
+`plugin.root` is optional and defaults to `.`. It identifies the installable WordPress plugin package inside the repository. For repositories that keep the plugin under a subdirectory, for example `wordpress/`, set:
+
+```json
+"root": "wordpress"
+```
+
+The main plugin file, WordPress `readme.txt`, and package-scoped managed files are resolved relative to that root. Repository-level files such as the GitHub `README.md`, changelog and shared repository logo remain at the repository root.
+
+Paths are validated as relative paths and may not escape the repository.
+
+### License modes
+
+The blueprint separates license declaration from license management:
+
+- `managed-gpl` — the blueprint requires `GPL-2.0-or-later`, validates the plugin header/readme, and manages the canonical GPL v2 `LICENSE` file inside the package root.
+- `declared` — the plugin records its existing license text explicitly, while the blueprint does **not** create, replace or reinterpret a license file. `license_header` may be `null` when the plugin intentionally has no License header.
+
+Existing `0.1.x` manifests that already declare the canonical GPL values remain readable and are treated as `managed-gpl` until they are upgraded.
+
+The blueprint never converts a plugin's license automatically.
 
 `Update URI` and update delivery are modeled separately. A non-WordPress.org `Update URI` protects an externally distributed plugin from accidental WordPress.org replacement, but it does not by itself implement GitHub update discovery or installation.
 
@@ -189,7 +214,8 @@ blueprints/wordpress-plugin/
 ├── ARCHITECTURE.md
 ├── manifest.schema.json
 ├── examples/
-│   └── simple.manifest.json
+│   ├── simple.manifest.json
+│   └── nested-declared.manifest.json
 ├── managed/
 │   └── gpl-2.0.txt
 └── profiles/

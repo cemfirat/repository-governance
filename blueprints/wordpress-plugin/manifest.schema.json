@@ -47,6 +47,11 @@
         "license_header"
       ],
       "properties": {
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
         "slug": {
           "type": "string",
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
@@ -79,16 +84,48 @@
           "type": "string",
           "minLength": 1
         },
-        "license": {
+        "license_mode": {
           "enum": [
-            "GPL-2.0-or-later"
+            "managed-gpl",
+            "declared"
           ]
         },
-        "license_header": {
+        "license": {
           "type": "string",
           "minLength": 1
+        },
+        "license_header": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "license_mode": {
+                "const": "managed-gpl"
+              }
+            },
+            "required": [
+              "license_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "license": {
+                "const": "GPL-2.0-or-later"
+              },
+              "license_header": {
+                "const": "GPL-2.0-or-later"
+              }
+            }
+          }
+        }
+      ]
     },
     "distribution": {
       "type": "object",

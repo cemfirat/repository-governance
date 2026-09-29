@@ -51,23 +51,30 @@ Public plugins should normally include:
 - `Plugin URI`
 - `Author`
 - `Author URI`
-- `License: GPL-2.0-or-later`
-- GPL license URI
+- explicit and internally consistent license metadata
 - an explicit `Update URI` when GitHub is the intended update source
+
+GPL-licensed plugins should normally use `GPL-2.0-or-later` plus the matching GPL license URI. A repository that deliberately uses another licensing model must declare that model explicitly; the shared blueprint must not silently convert it to GPL.
 
 Requirements should reflect the code actually used, not arbitrary version preferences.
 
-## 4. Repository files
+## 4. Repository and package files
 
-The normal baseline is:
+The repository-level baseline is normally:
 
 - `README.md`
-- `readme.txt`
 - `CHANGELOG.md`
-- `LICENSE`
 - `.gitignore`
 - `assets/logo.svg`
 - `.github/` when CI, release automation or repository-specific templates are used
+
+The installable WordPress package normally includes:
+
+- the main plugin PHP file
+- `readme.txt`
+- `LICENSE` when the declared licensing model requires a distributed license file
+
+For most plugins the package root is the repository root. Repositories that deliberately keep the installable plugin under a subdirectory may declare that package root in the blueprint manifest rather than duplicating or moving repository-level documentation.
 
 Additional files such as `SECURITY.md`, `CONTRIBUTING.md`, `docs/`, `tests/`, `scripts/`, Composer metadata or npm metadata are added when justified by the plugin.
 
@@ -79,9 +86,13 @@ The repository slug, plugin directory, main plugin filename, text domain, releas
 
 ## 6. Licensing
 
-If the plugin header declares GPL-2.0-or-later, the repository must contain the complete GPL v2 license text in `LICENSE`.
+Licensing is never inferred from another plugin and is never changed merely to satisfy the blueprint.
 
-Do not publish a release package with a missing, empty or truncated license.
+For `GPL-2.0-or-later` plugins managed by the shared blueprint, the installable package must contain the complete GPL v2 license text in `LICENSE`, and the plugin header/readme metadata must remain consistent.
+
+Plugins with an intentionally different license may use the blueprint's declared-license mode. In that mode the blueprint validates the declared metadata but does not create, replace or reinterpret a license file.
+
+Do not publish a package with contradictory or misleading license metadata.
 
 ## 7. Packaging
 
@@ -162,7 +173,8 @@ Before the first stable release:
 - [ ] plugin header finalized
 - [ ] repository/directory/main-file/text-domain identity finalized
 - [ ] WordPress and PHP minimum versions verified
-- [ ] `LICENSE` present and complete
+- [ ] license mode and metadata are explicit and internally consistent
+- [ ] managed GPL packages contain the complete canonical `LICENSE`
 - [ ] `readme.txt` matches plugin metadata
 - [ ] `CHANGELOG.md` created
 - [ ] packaging contents defined

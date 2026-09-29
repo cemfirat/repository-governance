@@ -3,24 +3,24 @@
   "schema_version": 1,
   "blueprint": "wordpress-plugin",
   "blueprint_version": "0.2.0",
-  "profile": "simple",
+  "profile": "application",
   "plugin": {
-    "slug": "example-plugin",
-    "name": "Example Plugin",
-    "main_file": "example-plugin.php",
+    "root": "wordpress",
+    "slug": "example-nested-plugin",
+    "name": "Example Nested Plugin",
+    "main_file": "example-nested-plugin.php",
     "version": "1.0.0",
-    "text_domain": "example-plugin",
+    "text_domain": "example-nested-plugin",
     "minimum_wordpress": "6.5",
     "minimum_php": "8.0",
     "author": "Cem Firat",
-    "license": "GPL-2.0-or-later",
-    "license_header": "GPL-2.0-or-later",
-    "root": ".",
-    "license_mode": "managed-gpl"
+    "license_mode": "declared",
+    "license": "Project-specific license",
+    "license_header": null
   },
   "distribution": {
     "channel": "github-releases",
-    "update_uri": "https://github.com/cemfirat/example-plugin",
+    "update_uri": "https://github.com/cemfirat/example-nested-plugin",
     "updates": "none"
   },
   "features": {

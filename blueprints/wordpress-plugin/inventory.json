@@ -2,7 +2,7 @@
   "$schema": "./fleet.schema.json",
   "schema_version": 1,
   "blueprint": "wordpress-plugin",
-  "target_blueprint_version": "0.1.0",
+  "target_blueprint_version": "0.2.0",
   "repositories": [
     {
       "repository": "cemfirat/ccf-sites-ads-wordpress-connector",
