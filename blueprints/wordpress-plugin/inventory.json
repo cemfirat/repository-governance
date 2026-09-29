@@ -8,7 +8,7 @@
       "repository": "cemfirat/ccf-sites-ads-wordpress-connector",
       "default_branch": "main",
       "desired_profile": "application",
-      "rollout": "planned"
+      "rollout": "enrolled"
     },
     {
       "repository": "cemfirat/wordpress-doctype-Inserter",
