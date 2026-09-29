@@ -83,6 +83,7 @@ Example:
   },
   "distribution": {
     "channel": "github-releases",
+    "updates": "none",
     "update_uri": "https://github.com/cemfirat/example-plugin"
   },
   "features": {
@@ -93,6 +94,8 @@ Example:
 ```
 
 The JSON Schema is in [`manifest.schema.json`](manifest.schema.json).
+
+`Update URI` and update delivery are modeled separately. A non-WordPress.org `Update URI` protects an externally distributed plugin from accidental WordPress.org replacement, but it does not by itself implement GitHub update discovery or installation.
 
 ## Audit and sync
 
