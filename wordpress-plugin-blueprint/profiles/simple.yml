@@ -1,0 +1,28 @@
+schema: 1
+profile: simple
+
+purpose: "Small WordPress utility plugins with minimal dependencies."
+
+baseline:
+  branding: true
+  license: GPL-2.0-or-later
+  readme_txt: true
+  changelog: true
+
+validation:
+  php_syntax: required
+  metadata_consistency: required
+  package_contents: required
+  plugin_check: evaluate
+  wordpress_integration: recommended
+  playground_preview: optional
+
+release:
+  deterministic_zip: required
+  github_release: optional
+  wordpress_update_flow: optional
+
+architecture:
+  composer: optional
+  npm: optional
+  forced_directories: false
