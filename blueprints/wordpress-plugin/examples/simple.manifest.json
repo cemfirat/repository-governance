@@ -1,0 +1,28 @@
+{
+  "$schema": "../manifest.schema.json",
+  "schema_version": 1,
+  "blueprint": "wordpress-plugin",
+  "blueprint_version": "0.1.0",
+  "profile": "simple",
+  "plugin": {
+    "slug": "example-plugin",
+    "name": "Example Plugin",
+    "main_file": "example-plugin.php",
+    "version": "1.0.0",
+    "text_domain": "example-plugin",
+    "minimum_wordpress": "6.5",
+    "minimum_php": "8.0",
+    "author": "Cem Firat",
+    "license": "GPL-2.0-or-later",
+    "license_header": "GPL-2.0-or-later"
+  },
+  "distribution": {
+    "channel": "github-releases",
+    "update_uri": "https://github.com/cemfirat/example-plugin",
+    "updates": "none"
+  },
+  "features": {
+    "block_plugin": false,
+    "playground_preview": false
+  }
+}

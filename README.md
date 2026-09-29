@@ -32,6 +32,12 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 - `standards/wordpress-plugin.md`  
   Shared presentation, metadata, licensing, packaging, testing and release baseline for public WordPress plugin repositories.
 
+- `blueprints/wordpress-plugin/`  
+  Versioned WordPress plugin profiles, manifest schema, research notes and controlled audit/sync methodology.
+
+- `scripts/wordpress-plugin-blueprint.py`  
+  Audits enrolled plugin repositories and synchronizes only explicitly exact-managed files.
+
 ## Requirements
 
 - Bash
