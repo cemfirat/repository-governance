@@ -20,7 +20,7 @@
       "repository": "cemfirat/wordpress-at-head-tag",
       "default_branch": "main",
       "desired_profile": "simple",
-      "rollout": "planned"
+      "rollout": "enrolled"
     },
     {
       "repository": "cemfirat/wordpress-calendar-booking",
