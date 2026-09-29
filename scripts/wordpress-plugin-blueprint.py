@@ -273,7 +273,18 @@ def audit(plugin_root: Path, governance_root: Path) -> dict:
     if not isinstance(distribution, dict):
         raise BlueprintError("distribution must be an object")
     channel = distribution.get("channel", "none")
+    updates = distribution.get("updates")
+    supported_updates = ("none", "wordpress.org", "github-release-updater")
+    if updates not in supported_updates:
+        raise BlueprintError(
+            f"Unsupported distribution.updates: {updates!r}"
+        )
+
     if channel == "github-releases":
+        if updates not in ("none", "github-release-updater"):
+            raise BlueprintError(
+                "github-releases supports updates=none or github-release-updater"
+            )
         expected_uri = distribution.get("update_uri")
         if not isinstance(expected_uri, str) or not expected_uri:
             raise BlueprintError(
@@ -286,7 +297,17 @@ def audit(plugin_root: Path, governance_root: Path) -> dict:
                 f"Update URI is {header.get('Update URI')!r}; expected {expected_uri!r}",
                 plugin["main_file"],
             )
-    elif channel not in ("wordpress.org", "none"):
+    elif channel == "wordpress.org":
+        if updates != "wordpress.org":
+            raise BlueprintError(
+                "wordpress.org distribution requires updates=wordpress.org"
+            )
+    elif channel == "none":
+        if updates != "none":
+            raise BlueprintError(
+                "distribution.channel=none requires updates=none"
+            )
+    else:
         raise BlueprintError(f"Unsupported distribution.channel: {channel!r}")
 
     readme_headers = parse_readme_headers(plugin_root / "readme.txt")
