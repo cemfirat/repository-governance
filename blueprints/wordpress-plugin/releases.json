@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "blueprint": "wordpress-plugin",
+  "releases": {
+    "0.2.0": {
+      "audit_action_sha": "8f3cb9d0ba9bfdb95d5a3510a5293950b523f10a",
+      "supported_from": [
+        "0.1.0"
+      ]
+    }
+  }
+}
