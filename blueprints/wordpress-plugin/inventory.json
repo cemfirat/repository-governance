@@ -32,7 +32,7 @@
       "repository": "cemfirat/wordpress-project-management",
       "default_branch": "main",
       "desired_profile": "application",
-      "rollout": "planned"
+      "rollout": "paused"
     },
     {
       "repository": "cemfirat/wordpress-widget-custom-css-classes",
