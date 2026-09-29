@@ -1,0 +1,27 @@
+{
+  "profile": "block",
+  "description": "Block-oriented WordPress plugins scaffolded with the official @wordpress/create-block toolchain.",
+  "required_files": [
+    ".ccf-wordpress-plugin.json",
+    ".gitignore",
+    "README.md",
+    "readme.txt",
+    "CHANGELOG.md",
+    "LICENSE",
+    "assets/logo.svg",
+    "package.json",
+    "src/"
+  ],
+  "recommended_files": [
+    "tests/",
+    ".wp-env.json"
+  ],
+  "exact_managed_files": {
+    "assets/logo.svg": "assets/logo.svg",
+    "LICENSE": "blueprints/wordpress-plugin/managed/gpl-2.0.txt"
+  },
+  "guidance": {
+    "architecture": "Use @wordpress/create-block for the WordPress block scaffold and layer the Cem Firat governance baseline on top.",
+    "ci": "Keep WordPress/JavaScript build tooling aligned with official packages; validate production build output and plugin packaging."
+  }
+}
