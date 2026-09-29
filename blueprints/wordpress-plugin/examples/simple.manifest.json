@@ -18,7 +18,8 @@
   },
   "distribution": {
     "channel": "github-releases",
-    "update_uri": "https://github.com/cemfirat/example-plugin"
+    "update_uri": "https://github.com/cemfirat/example-plugin",
+    "updates": "none"
   },
   "features": {
     "block_plugin": false,
