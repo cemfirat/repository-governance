@@ -144,11 +144,20 @@ This keeps the blueprint central while preserving each plugin as an independent,
 
 Cross-repository PR orchestration is intentionally a later phase. The first phase establishes deterministic local audit/sync behavior and a stable manifest before introducing credentials or write automation.
 
-## Reusable workflows
+## Central GitHub Action
 
-Shared CI logic may later be exposed as reusable GitHub workflows. Consumers should reference a reviewed tag or commit SHA, never a moving `main` branch for required checks.
+The blueprint audit is exposed as a composite GitHub Action from this directory. A plugin workflow only needs to check out its own source and call a pinned governance revision:
 
-The reusable workflow should remain a thin baseline. Plugin-specific test matrices stay in the plugin repository.
+```yaml
+- uses: actions/checkout@<pinned-actions-checkout-sha>
+- uses: cemfirat/repository-governance/blueprints/wordpress-plugin@<pinned-governance-sha>
+```
+
+The action executes the audit code and profile files from the **same pinned governance revision**, so callers do not need a second governance checkout and cannot accidentally mix script/profile versions.
+
+Consumers should pin a reviewed commit SHA or stable blueprint tag, never a moving `main` branch for a required check.
+
+Plugin-specific test matrices remain in the plugin repository.
 
 ## New plugin methodology
 
