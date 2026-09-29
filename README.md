@@ -29,6 +29,9 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 - `.github/workflows/validate.yml`  
   Validates the templates and helper script on pull requests and pushes to `main`.
 
+- `standards/wordpress-plugin.md`  
+  Shared presentation, metadata, licensing, packaging, testing and release baseline for public WordPress plugin repositories.
+
 ## Requirements
 
 - Bash
