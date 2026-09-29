@@ -360,7 +360,7 @@ def scaffold_plugin(
         raise ScaffoldError("author must not be empty")
     author = author.strip()
     if not re.fullmatch(
-        r"^\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$",
+        r"^\d+(?:\.\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$",
         version,
     ):
         raise ScaffoldError(
@@ -370,7 +370,7 @@ def scaffold_plugin(
         ("minimum_wordpress", minimum_wordpress),
         ("minimum_php", minimum_php),
     ):
-        if not re.fullmatch(r"^\\d+\\.\\d+(?:\\.\\d+)?$", value):
+        if not re.fullmatch(r"^\d+\.\d+(?:\.\d+)?$", value):
             raise ScaffoldError(
                 f"{field_name} must use a numeric version such as 6.5 or 8.0"
             )
