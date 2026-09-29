@@ -1,8 +1,11 @@
+import base64
 import importlib.util
 import json
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT_PATH = (
@@ -114,6 +117,67 @@ class FleetPlannerTests(unittest.TestCase):
             ],
             calls,
         )
+
+
+    def test_fetch_github_manifest_decodes_contents_api_response(self):
+        payload = {
+            "encoding": "base64",
+            "content": base64.b64encode(
+                json.dumps(manifest()).encode("utf-8")
+            ).decode("ascii"),
+        }
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return json.dumps(payload).encode("utf-8")
+
+        with mock.patch.object(
+            fleet.urllib.request,
+            "urlopen",
+            return_value=Response(),
+        ) as urlopen:
+            value = fleet.fetch_github_manifest(
+                "cemfirat/plugin-a",
+                "main",
+                token="test-token",
+            )
+
+        self.assertEqual(manifest(), value)
+        request = urlopen.call_args.args[0]
+        self.assertEqual(
+            "Bearer test-token",
+            request.headers["Authorization"],
+        )
+        self.assertIn(
+            "/repos/cemfirat/plugin-a/contents/",
+            request.full_url,
+        )
+
+    def test_fetch_github_manifest_treats_404_as_unenrolled(self):
+        error = urllib.error.HTTPError(
+            "https://api.github.com/example",
+            404,
+            "Not Found",
+            hdrs=None,
+            fp=None,
+        )
+        with mock.patch.object(
+            fleet.urllib.request,
+            "urlopen",
+            side_effect=error,
+        ):
+            value = fleet.fetch_github_manifest(
+                "cemfirat/plugin-a",
+                "main",
+            )
+
+        self.assertIsNone(value)
 
     def test_unknown_repository_filter_is_rejected(self):
         with self.assertRaises(fleet.FleetError):
