@@ -36,6 +36,21 @@ PLUGIN_PHP = """<?php
  */
 """
 
+DECLARED_PLUGIN_PHP = """<?php
+/**
+ * Plugin Name: Example Plugin
+ * Plugin URI: https://github.com/cemfirat/example-plugin
+ * Description: A small example plugin used by the blueprint tests.
+ * Version: 1.2.3
+ * Requires at least: 6.5
+ * Requires PHP: 8.0
+ * Author: Cem Firat
+ * Author URI: https://cemfirat.com/
+ * Update URI: https://github.com/cemfirat/example-plugin
+ * Text Domain: example-plugin
+ */
+"""
+
 README = """<p align="center">
   <img src="https://raw.githubusercontent.com/cemfirat/repository-governance/main/assets/brand-banner.webp" alt="Cem Firat creative consultancy artwork" width="900" />
 </p>
@@ -55,6 +70,17 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Example.
 """
 
+DECLARED_README_TXT = """=== Example Plugin ===
+Contributors: cemfirat
+Tags: example
+Requires at least: 6.5
+Requires PHP: 8.0
+Stable tag: 1.2.3
+License: Proprietary / private project
+
+Example.
+"""
+
 GPL = """GNU GENERAL PUBLIC LICENSE
 Version 2, June 1991
 test fixture
@@ -67,6 +93,7 @@ class BlueprintTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.gov = self.root / "governance"
         self.plugin = self.root / "plugin"
+
         (
             self.gov
             / "blueprints"
@@ -84,20 +111,30 @@ class BlueprintTests(unittest.TestCase):
 
         profile = {
             "profile": "simple",
-            "required_files": [
+            "repository_required_files": [
                 ".ccf-wordpress-plugin.json",
                 "README.md",
-                "readme.txt",
                 "CHANGELOG.md",
-                "LICENSE",
                 "assets/logo.svg",
             ],
-            "exact_managed_files": {
-                "assets/logo.svg": "assets/logo.svg",
-                "LICENSE": (
-                    "blueprints/wordpress-plugin/managed/gpl-2.0.txt"
-                ),
-            },
+            "package_required_files": [
+                "readme.txt",
+            ],
+            "exact_managed_files": [
+                {
+                    "target": "assets/logo.svg",
+                    "source": "assets/logo.svg",
+                    "scope": "repository",
+                },
+                {
+                    "target": "LICENSE",
+                    "source": (
+                        "blueprints/wordpress-plugin/managed/gpl-2.0.txt"
+                    ),
+                    "scope": "package",
+                    "when_license_mode": "managed-gpl",
+                },
+            ],
         }
         (
             self.gov
@@ -121,7 +158,7 @@ class BlueprintTests(unittest.TestCase):
         manifest = {
             "schema_version": 1,
             "blueprint": "wordpress-plugin",
-            "blueprint_version": "0.1.0",
+            "blueprint_version": "0.2.0",
             "profile": "simple",
             "plugin": {
                 "slug": "example-plugin",
@@ -132,6 +169,7 @@ class BlueprintTests(unittest.TestCase):
                 "minimum_wordpress": "6.5",
                 "minimum_php": "8.0",
                 "author": "Cem Firat",
+                "license_mode": "managed-gpl",
                 "license": "GPL-2.0-or-later",
                 "license_header": "GPL-2.0-or-later",
             },
@@ -147,10 +185,7 @@ class BlueprintTests(unittest.TestCase):
                 "playground_preview": False,
             },
         }
-        (self.plugin / ".ccf-wordpress-plugin.json").write_text(
-            json.dumps(manifest),
-            encoding="utf-8",
-        )
+        self.write_manifest(manifest)
         (self.plugin / "example-plugin.php").write_text(
             PLUGIN_PHP,
             encoding="utf-8",
@@ -180,10 +215,133 @@ class BlueprintTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def manifest(self):
+        return json.loads(
+            (
+                self.plugin / ".ccf-wordpress-plugin.json"
+            ).read_text(encoding="utf-8")
+        )
+
+    def write_manifest(self, value):
+        (
+            self.plugin / ".ccf-wordpress-plugin.json"
+        ).write_text(
+            json.dumps(value),
+            encoding="utf-8",
+        )
+
+    def move_package_to(self, package_dir):
+        package_root = self.plugin / package_dir
+        package_root.mkdir(parents=True)
+        for name in (
+            "example-plugin.php",
+            "readme.txt",
+            "LICENSE",
+        ):
+            (self.plugin / name).rename(package_root / name)
+
+        manifest = self.manifest()
+        manifest["plugin"]["root"] = package_dir
+        self.write_manifest(manifest)
+        return package_root
+
     def test_clean_plugin_passes(self):
         result = blueprint.audit(self.plugin, self.gov)
         self.assertEqual("clean", result["status"])
+        self.assertEqual(".", result["package_root"])
+        self.assertEqual("managed-gpl", result["license_mode"])
         self.assertEqual([], result["issues"])
+
+    def test_legacy_gpl_manifest_infers_managed_mode(self):
+        manifest = self.manifest()
+        manifest["plugin"].pop("license_mode")
+        self.write_manifest(manifest)
+
+        result = blueprint.audit(self.plugin, self.gov)
+        self.assertEqual("clean", result["status"])
+        self.assertEqual("managed-gpl", result["license_mode"])
+
+    def test_nested_plugin_root_passes(self):
+        self.move_package_to("wordpress")
+
+        result = blueprint.audit(self.plugin, self.gov)
+
+        self.assertEqual("clean", result["status"])
+        self.assertEqual("wordpress", result["package_root"])
+        self.assertEqual([], result["issues"])
+
+    def test_nested_plugin_root_syncs_license_inside_package(self):
+        package_root = self.move_package_to("wordpress")
+        (package_root / "LICENSE").unlink()
+
+        plan = blueprint.sync_exact(
+            self.plugin,
+            self.gov,
+            write=False,
+        )
+        self.assertEqual(
+            {"wordpress/LICENSE"},
+            {item["path"] for item in plan["changes"]},
+        )
+
+        blueprint.sync_exact(
+            self.plugin,
+            self.gov,
+            write=True,
+        )
+        self.assertEqual(
+            GPL,
+            (package_root / "LICENSE").read_text(encoding="utf-8"),
+        )
+
+    def test_declared_license_does_not_require_or_sync_gpl(self):
+        manifest = self.manifest()
+        manifest["plugin"]["license_mode"] = "declared"
+        manifest["plugin"]["license"] = "Proprietary / private project"
+        manifest["plugin"]["license_header"] = None
+        self.write_manifest(manifest)
+
+        (self.plugin / "example-plugin.php").write_text(
+            DECLARED_PLUGIN_PHP,
+            encoding="utf-8",
+        )
+        (self.plugin / "readme.txt").write_text(
+            DECLARED_README_TXT,
+            encoding="utf-8",
+        )
+        (self.plugin / "LICENSE").unlink()
+
+        result = blueprint.audit(self.plugin, self.gov)
+        self.assertEqual("clean", result["status"])
+        self.assertEqual("declared", result["license_mode"])
+        self.assertFalse((self.plugin / "LICENSE").exists())
+
+        plan = blueprint.sync_exact(
+            self.plugin,
+            self.gov,
+            write=False,
+        )
+        self.assertNotIn(
+            "LICENSE",
+            {item["path"] for item in plan["changes"]},
+        )
+
+    def test_declared_license_readme_mismatch_is_reported(self):
+        manifest = self.manifest()
+        manifest["plugin"]["license_mode"] = "declared"
+        manifest["plugin"]["license"] = "Proprietary / private project"
+        manifest["plugin"]["license_header"] = None
+        self.write_manifest(manifest)
+
+        (self.plugin / "example-plugin.php").write_text(
+            DECLARED_PLUGIN_PHP,
+            encoding="utf-8",
+        )
+        (self.plugin / "LICENSE").unlink()
+
+        result = blueprint.audit(self.plugin, self.gov)
+        codes = {issue["code"] for issue in result["issues"]}
+        self.assertIn("readme_license_mismatch", codes)
 
     def test_managed_file_drift_is_reported(self):
         (self.plugin / "assets" / "logo.svg").write_text(
@@ -195,15 +353,9 @@ class BlueprintTests(unittest.TestCase):
         self.assertIn("managed_file_drift", codes)
 
     def test_header_mismatch_is_reported(self):
-        manifest_path = self.plugin / ".ccf-wordpress-plugin.json"
-        manifest = json.loads(
-            manifest_path.read_text(encoding="utf-8")
-        )
+        manifest = self.manifest()
         manifest["plugin"]["text_domain"] = "wrong-domain"
-        manifest_path.write_text(
-            json.dumps(manifest),
-            encoding="utf-8",
-        )
+        self.write_manifest(manifest)
 
         result = blueprint.audit(self.plugin, self.gov)
         codes = {issue["code"] for issue in result["issues"]}
@@ -263,30 +415,40 @@ class BlueprintTests(unittest.TestCase):
             ),
         )
 
+    def test_managed_gpl_missing_license_is_reported(self):
+        (self.plugin / "LICENSE").unlink()
+
+        result = blueprint.audit(self.plugin, self.gov)
+
+        issues = {
+            (issue["code"], issue.get("path"))
+            for issue in result["issues"]
+        }
+        self.assertIn(
+            ("managed_file_missing", "LICENSE"),
+            issues,
+        )
+
     def test_invalid_distribution_update_combination_is_rejected(self):
-        manifest_path = self.plugin / ".ccf-wordpress-plugin.json"
-        manifest = json.loads(
-            manifest_path.read_text(encoding="utf-8")
-        )
+        manifest = self.manifest()
         manifest["distribution"]["updates"] = "wordpress.org"
-        manifest_path.write_text(
-            json.dumps(manifest),
-            encoding="utf-8",
-        )
+        self.write_manifest(manifest)
 
         with self.assertRaises(blueprint.BlueprintError):
             blueprint.audit(self.plugin, self.gov)
 
     def test_path_escape_is_rejected(self):
-        manifest_path = self.plugin / ".ccf-wordpress-plugin.json"
-        manifest = json.loads(
-            manifest_path.read_text(encoding="utf-8")
-        )
+        manifest = self.manifest()
         manifest["plugin"]["main_file"] = "../escape.php"
-        manifest_path.write_text(
-            json.dumps(manifest),
-            encoding="utf-8",
-        )
+        self.write_manifest(manifest)
+
+        with self.assertRaises(blueprint.BlueprintError):
+            blueprint.audit(self.plugin, self.gov)
+
+    def test_plugin_root_escape_is_rejected(self):
+        manifest = self.manifest()
+        manifest["plugin"]["root"] = "../wordpress"
+        self.write_manifest(manifest)
 
         with self.assertRaises(blueprint.BlueprintError):
             blueprint.audit(self.plugin, self.gov)
