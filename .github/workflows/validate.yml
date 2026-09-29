@@ -31,10 +31,12 @@ jobs:
           scripts/wordpress-plugin-fleet.py
           scripts/wordpress-plugin-upgrade-plan.py
           scripts/wordpress-plugin-pr-orchestrator.py
+          scripts/wordpress-plugin-scaffold.py
           tests/test_wordpress_plugin_blueprint.py
           tests/test_wordpress_plugin_fleet.py
           tests/test_wordpress_plugin_upgrade_plan.py
           tests/test_wordpress_plugin_pr_orchestrator.py
+          tests/test_wordpress_plugin_scaffold.py
 
       - name: Run WordPress blueprint unit tests
         run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_*.py' -v
