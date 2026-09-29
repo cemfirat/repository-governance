@@ -66,6 +66,38 @@ CCF_FLEET_GITHUB_TOKEN
 
 The planner deliberately does not use GitHub Actions' repository-scoped `GITHUB_TOKEN` by default. A token must be supplied consciously when cross-repository private access is actually needed.
 
+## Read-only upgrade proposals
+
+After the fleet planner has identified version drift, use the upgrade proposal planner:
+
+```bash
+python3 scripts/wordpress-plugin-upgrade-plan.py
+```
+
+For JSON output:
+
+```bash
+python3 scripts/wordpress-plugin-upgrade-plan.py --format json
+```
+
+Limit the proposal to one repository:
+
+```bash
+python3 scripts/wordpress-plugin-upgrade-plan.py \
+  --repository cemfirat/wordpress-calendar-booking
+```
+
+The proposal planner is deliberately conservative:
+
+- it never writes another repository;
+- it only marks migrations as `safe-upgrade` when that exact blueprint-version migration is encoded and tested;
+- unknown migrations become `manual-review`;
+- repositories without a manifest become `manual-enrollment`;
+- repositories marked `paused` in the fleet inventory are not fetched or changed;
+- license modes are never guessed when existing metadata is ambiguous.
+
+A later write-capable orchestrator may consume these proposals, but it must still create a focused branch/PR per target repository and rerun that repository's own checks.
+
 ## Propagation model
 
 The next layer may turn a plan into pull-request proposals, but it must preserve these boundaries:

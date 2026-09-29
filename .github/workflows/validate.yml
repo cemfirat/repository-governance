@@ -29,8 +29,10 @@ jobs:
           python3 -m py_compile
           scripts/wordpress-plugin-blueprint.py
           scripts/wordpress-plugin-fleet.py
+          scripts/wordpress-plugin-upgrade-plan.py
           tests/test_wordpress_plugin_blueprint.py
           tests/test_wordpress_plugin_fleet.py
+          tests/test_wordpress_plugin_upgrade_plan.py
 
       - name: Run WordPress blueprint unit tests
         run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_*.py' -v
