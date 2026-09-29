@@ -91,11 +91,29 @@ The audit uses the Python standard library only.
 
 It must never modify validated or plugin-specific files.
 
-### 6. Cross-repository propagation
+### 6. New-plugin scaffolding
+
+The scaffold generator creates only the repository/package baseline owned by the blueprint:
+
+- manifest;
+- shared branding;
+- WordPress metadata/readme;
+- changelog and gitignore;
+- managed GPL license when explicitly selected;
+- minimal PHP entry point;
+- pinned read-only blueprint audit workflow.
+
+It derives the target blueprint version and immutable audit-action SHA from reviewed governance metadata. Generation happens in a temporary sibling directory and the requested destination is exposed only after the normal blueprint audit passes.
+
+The generator does not create GitHub repositories, publish releases, invent feature architecture or infer non-GPL licensing.
+
+Block product scaffolding remains delegated to the official `@wordpress/create-block` toolchain.
+
+### 7. Cross-repository propagation
 
 Cross-repository automation is intentionally separated from local synchronization.
 
-Future orchestrator responsibilities:
+Cross-repository orchestrator responsibilities:
 
 1. discover enrolled repositories;
 2. read each manifest;
