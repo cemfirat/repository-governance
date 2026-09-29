@@ -1,25 +1,35 @@
 {
   "profile": "block",
   "description": "Block-oriented WordPress plugins scaffolded with the official @wordpress/create-block toolchain.",
-  "required_files": [
+  "repository_required_files": [
     ".ccf-wordpress-plugin.json",
     ".gitignore",
     "README.md",
-    "readme.txt",
     "CHANGELOG.md",
-    "LICENSE",
-    "assets/logo.svg",
+    "assets/logo.svg"
+  ],
+  "package_required_files": [
+    "readme.txt",
     "package.json",
     "src/"
   ],
-  "recommended_files": [
+  "recommended_repository_files": [
     "tests/",
     ".wp-env.json"
   ],
-  "exact_managed_files": {
-    "assets/logo.svg": "assets/logo.svg",
-    "LICENSE": "blueprints/wordpress-plugin/managed/gpl-2.0.txt"
-  },
+  "exact_managed_files": [
+    {
+      "target": "assets/logo.svg",
+      "source": "assets/logo.svg",
+      "scope": "repository"
+    },
+    {
+      "target": "LICENSE",
+      "source": "blueprints/wordpress-plugin/managed/gpl-2.0.txt",
+      "scope": "package",
+      "when_license_mode": "managed-gpl"
+    }
+  ],
   "guidance": {
     "architecture": "Use @wordpress/create-block for the WordPress block scaffold and layer the Cem Firat governance baseline on top.",
     "ci": "Keep WordPress/JavaScript build tooling aligned with official packages; validate production build output and plugin packaging."
