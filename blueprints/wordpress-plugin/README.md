@@ -192,18 +192,23 @@ Plugin-specific test matrices remain in the plugin repository.
 
 ## New plugin methodology
 
+For new simple and application plugins, use the deterministic scaffold generator documented in [SCAFFOLD.md](SCAFFOLD.md). It reads the current blueprint target and reviewed immutable audit-action SHA from governance metadata, generates into a temporary directory and exposes the destination only after the normal blueprint audit passes.
+
 Before a new plugin is scaffolded:
 
-1. define the plugin purpose and distribution channel;
+1. define the plugin purpose and a concise verified description;
 2. choose the smallest fitting profile;
-3. finalize slug, plugin directory, main filename, text domain, and update identity before the first stable release;
-4. scaffold only the profile-appropriate structure;
-5. run the blueprint audit locally;
-6. add focused behavior tests;
-7. prove CI on a branch before making it a merge gate;
-8. release only from reviewed/tested `main`.
+3. explicitly choose the license mode and distribution/update model;
+4. finalize slug, package root, main filename, text domain, and repository identity;
+5. generate the baseline with `scripts/wordpress-plugin-scaffold.py`;
+6. add only the product architecture the plugin actually needs;
+7. add focused behavior tests;
+8. prove CI on a branch before making additional checks merge gates;
+9. release only from reviewed/tested `main`.
 
-For block plugins, use `@wordpress/create-block` as the underlying WordPress scaffold and layer this governance baseline on top.
+The generator deliberately refuses to invent a GitHub updater implementation or overwrite a non-empty destination.
+
+For block plugins, use the official `@wordpress/create-block` toolchain for product scaffolding and layer this governance baseline on top after the block scaffold exists.
 
 ## Repository layout
 
@@ -212,6 +217,7 @@ blueprints/wordpress-plugin/
 ├── README.md
 ├── RESEARCH.md
 ├── ARCHITECTURE.md
+├── SCAFFOLD.md
 ├── manifest.schema.json
 ├── examples/
 │   ├── simple.manifest.json
@@ -224,10 +230,12 @@ blueprints/wordpress-plugin/
     └── block.json
 
 scripts/
-└── wordpress-plugin-blueprint.py
+├── wordpress-plugin-blueprint.py
+└── wordpress-plugin-scaffold.py
 
 tests/
-└── test_wordpress_plugin_blueprint.py
+├── test_wordpress_plugin_blueprint.py
+└── test_wordpress_plugin_scaffold.py
 ```
 
 The general policy remains documented in [`../../standards/wordpress-plugin.md`](../../standards/wordpress-plugin.md).
