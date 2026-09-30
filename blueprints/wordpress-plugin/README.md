@@ -4,7 +4,7 @@ The WordPress Plugin Blueprint is the shared source of truth for public WordPres
 
 It is deliberately **not** a single rigid PHP boilerplate. A small utility plugin, a large WordPress application, and a block plugin have different technical needs. The blueprint standardizes the parts that should be consistent across all of them: repository identity, branding, metadata, licensing, baseline validation, packaging/release policy, and controlled propagation of shared updates.
 
-Current blueprint version: **0.2.0 (draft)**
+Current blueprint version: **0.2.0**
 
 ## Goals
 
@@ -173,7 +173,7 @@ The intended propagation flow is:
 
 This keeps the blueprint central while preserving each plugin as an independent, reviewable product.
 
-Cross-repository PR orchestration is intentionally a later phase. The first phase establishes deterministic local audit/sync behavior and a stable manifest before introducing credentials or write automation.
+Cross-repository PR orchestration is implemented as a guarded, one-repository-at-a-time layer. It defaults to dry-run, never writes directly to protected `main`, never auto-merges, and leaves the target repository's own CI/review policy as merge authority.
 
 ## Central GitHub Action
 
@@ -189,6 +189,30 @@ The action executes the audit code and profile files from the **same pinned gove
 Consumers should pin a reviewed commit SHA or stable blueprint tag, never a moving `main` branch for a required check.
 
 Plugin-specific test matrices remain in the plugin repository.
+
+## Official WordPress Plugin Check
+
+The blueprint now provides an optional composite action at `blueprints/wordpress-plugin/plugin-check`.
+
+Use it only after the repository has deterministic installable/build contents. The wrapper:
+
+- runs the official `WordPress/plugin-check-action` pinned to an immutable reviewed commit;
+- inspects the built/installable plugin directory, not arbitrary repository development files;
+- uses the manifest's canonical plugin slug;
+- includes WordPress.org directory policy only when `distribution.channel` is `wordpress.org`;
+- keeps general, security, performance and accessibility checks for GitHub/other distribution;
+- does not globally suppress warning/error codes;
+- does not run against production WordPress sites.
+
+See [PLUGIN-CHECK.md](PLUGIN-CHECK.md).
+
+## WordPress Playground previews
+
+`features.playground_preview` remains opt-in.
+
+Playground is valuable when a PR has meaningful visual/admin/front-end behavior to review, but it is not a baseline requirement for every utility plugin. The official PR Preview action requires pull-request write permission to publish its preview link, and built-plugin/fork-safe flows require a separate read-only build plus publish workflow. Therefore the blueprint does not force this permission surface onto non-visual plugins.
+
+When enabled, use the official WordPress Playground PR Preview flow, keep untrusted PR code in read-only jobs, and never replace that boundary with `pull_request_target`.
 
 ## New plugin methodology
 

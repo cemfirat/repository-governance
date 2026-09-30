@@ -27,7 +27,7 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
   Applies both templates with the GitHub CLI and can add required status checks at creation time.
 
 - `.github/workflows/validate.yml`  
-  Validates the templates and helper script on pull requests and pushes to `main`.
+  Validates the templates and helper scripts on every branch push and on pull requests. This keeps the repository aligned with the rule that branch CI must be green before a PR is opened.
 
 - `standards/wordpress-plugin.md`  
   Shared presentation, metadata, licensing, packaging, testing and release baseline for public WordPress plugin repositories.
@@ -43,6 +43,9 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 
 - `scripts/wordpress-plugin-fleet.py` / `wordpress-plugin-upgrade-plan.py` / `wordpress-plugin-pr-orchestrator.py`  
   Plan and propagate reviewed blueprint upgrades across enrolled plugin repositories without writing directly to protected `main`.
+
+- `blueprints/wordpress-plugin/plugin-check/`  
+  Optional distribution-aware wrapper around the official WordPress Plugin Check action. It runs against built/installable plugin contents and derives the appropriate category set from the plugin manifest.
 
 ## Requirements
 
