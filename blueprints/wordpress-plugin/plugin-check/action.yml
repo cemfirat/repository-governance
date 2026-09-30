@@ -1,0 +1,40 @@
+name: CCF WordPress Plugin Check
+description: Run the official WordPress Plugin Check with distribution-aware blueprint policy.
+
+inputs:
+  build-dir:
+    description: Path to the built/installable plugin directory to inspect.
+    required: true
+  repository-root:
+    description: Repository root containing .ccf-wordpress-plugin.json.
+    required: false
+    default: "."
+  wp-version:
+    description: WordPress version passed to the official Plugin Check action.
+    required: false
+    default: "latest"
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Plugin Check policy
+      id: policy
+      shell: bash
+      env:
+        CCF_REPOSITORY_ROOT: ${{ inputs.repository-root }}
+        CCF_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        python3 "$CCF_ACTION_PATH/../../../scripts/wordpress-plugin-check-policy.py" \
+          --manifest "$CCF_REPOSITORY_ROOT/.ccf-wordpress-plugin.json" \
+          --github-output "$GITHUB_OUTPUT"
+
+    - name: Run official WordPress Plugin Check
+      uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
+      with:
+        build-dir: ${{ inputs.build-dir }}
+        slug: ${{ steps.policy.outputs.slug }}
+        categories: ${{ steps.policy.outputs.categories }}
+        include-experimental: "false"
+        repo-token: ""
+        wp-version: ${{ inputs.wp-version }}

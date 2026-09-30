@@ -116,13 +116,17 @@ Before a workflow becomes a required merge gate:
 
 1. its checks must have a clear purpose;
 2. equivalent local or static checks should be understood;
-3. the workflow should be tested on a branch;
+3. the workflow must run and pass on the feature branch before a pull request is opened;
 4. its check names should be stable;
 5. unnecessary matrix combinations should be avoided.
+
+**Repository rule:** no pull request is opened before the relevant branch CI is green.
 
 At minimum, public PHP plugins should have syntax validation. Behavior-changing code should gain focused regression coverage where practical.
 
 Real WordPress integration or HTTP tests are preferred for behavior that depends on WordPress lifecycle hooks, installation/update behavior or generated frontend output.
+
+The official WordPress Plugin Check is an optional shared quality layer once deterministic installable package contents exist. Run it against those package contents, not against a production site. For external/GitHub distribution, use cross-distribution categories (general, security, performance, accessibility) and do not apply WordPress.org-directory-only policy accidentally. For WordPress.org distribution, include the directory-policy category. Do not hide findings through blanket suppressions; review exceptions individually.
 
 ## 9. Releases and updates
 
