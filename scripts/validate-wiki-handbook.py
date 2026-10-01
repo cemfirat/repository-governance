@@ -69,8 +69,8 @@ def main() -> int:
             errors.append("Home.md is missing the source-of-truth boundary")
 
         first_steps = (WIKI / "Erste-Schritte.md").read_text(encoding="utf-8")
-        if "nicht kopiert oder umbenannt" not in first_steps:
-            errors.append("Erste-Schritte.md must explain that governance is not cloned per plugin")
+        if "klonst Du Governance nicht nochmals" not in first_steps:
+            errors.append("Erste-Schritte.md must explain that governance is cloned only once")
 
         new_plugin = (WIKI / "Neues-WordPress-Plugin.md").read_text(encoding="utf-8")
         required_new_plugin_markers = (
