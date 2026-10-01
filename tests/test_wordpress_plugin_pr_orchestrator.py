@@ -84,6 +84,16 @@ class FakeClient:
         self.current_workflow = current_workflow
         self.calls = []
         self.existing_branch = False
+        self.staged_files = {}
+        self.check_run_values = [
+            {
+                "name": "Branch CI",
+                "status": "completed",
+                "conclusion": "success",
+            }
+        ]
+        self.legacy_state = None
+        self.legacy_statuses = []
 
     def branch_exists(self, repository, branch):
         self.calls.append(("branch_exists", repository, branch))
@@ -95,6 +105,8 @@ class FakeClient:
 
     def get_file(self, repository, path, ref):
         self.calls.append(("get_file", repository, path, ref))
+        if ref != "main" and (ref, path) in self.staged_files:
+            return self.staged_files[(ref, path)], "d" * 40
         if path == orchestrator.MANIFEST_PATH:
             return json.dumps(self.current_manifest, indent=2) + "\n", "b" * 40
         if path == orchestrator.WORKFLOW_PATH:
@@ -103,11 +115,21 @@ class FakeClient:
 
     def create_branch(self, repository, branch, base_sha):
         self.calls.append(("create_branch", repository, branch, base_sha))
+        self.existing_branch = True
 
     def update_file(self, repository, path, content, sha, branch, message):
         self.calls.append(
             ("update_file", repository, path, sha, branch, message)
         )
+        self.staged_files[(branch, path)] = content
+
+    def check_runs(self, repository, sha):
+        self.calls.append(("check_runs", repository, sha))
+        return self.check_run_values
+
+    def combined_status(self, repository, sha):
+        self.calls.append(("combined_status", repository, sha))
+        return self.legacy_state, self.legacy_statuses
 
     def create_pull_request(
         self,
@@ -199,7 +221,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual("paused", value["status"])
         self.assertFalse(value["safe_to_apply"])
 
-    def test_apply_creates_branch_updates_control_files_and_opens_pr(self):
+    def test_apply_stages_branch_without_opening_pr(self):
         current = manifest()
         change_set = orchestrator.build_change_set(
             entry(),
@@ -218,11 +240,8 @@ class OrchestratorTests(unittest.TestCase):
             change_set,
         )
 
-        self.assertEqual("pull-request-created", result["status"])
-        self.assertEqual(
-            "https://github.com/cemfirat/example-plugin/pull/1",
-            result["pull_request"],
-        )
+        self.assertEqual("branch-ready-for-ci", result["status"])
+        self.assertIsNone(result["pull_request"])
         updated_paths = [
             call[2]
             for call in client.calls
@@ -238,7 +257,77 @@ class OrchestratorTests(unittest.TestCase):
         self.assertTrue(
             any(call[0] == "create_branch" for call in client.calls)
         )
+        self.assertFalse(
+            any(call[0] == "create_pull_request" for call in client.calls)
+        )
+
+    def test_open_pr_requires_and_accepts_green_branch_ci(self):
+        current = manifest()
+        change_set = orchestrator.build_change_set(
+            entry(),
+            current,
+            workflow(),
+            "0.2.0",
+            releases(),
+        )
+        client = FakeClient(current, workflow())
+        orchestrator.apply_change_set(
+            client,
+            entry(),
+            current,
+            workflow(),
+            change_set,
+        )
+
+        result = orchestrator.open_pull_request_after_green_ci(
+            client,
+            entry(),
+            change_set,
+        )
+
+        self.assertEqual("pull-request-created", result["status"])
+        self.assertEqual("a" * 40, result["head_sha"])
+        self.assertEqual(
+            "https://github.com/cemfirat/example-plugin/pull/1",
+            result["pull_request"],
+        )
         self.assertTrue(
+            any(call[0] == "check_runs" for call in client.calls)
+        )
+
+    def test_open_pr_refuses_pending_branch_ci(self):
+        current = manifest()
+        change_set = orchestrator.build_change_set(
+            entry(),
+            current,
+            workflow(),
+            "0.2.0",
+            releases(),
+        )
+        client = FakeClient(current, workflow())
+        orchestrator.apply_change_set(
+            client,
+            entry(),
+            current,
+            workflow(),
+            change_set,
+        )
+        client.check_run_values = [
+            {
+                "name": "Branch CI",
+                "status": "in_progress",
+                "conclusion": None,
+            }
+        ]
+
+        with self.assertRaises(orchestrator.OrchestratorError):
+            orchestrator.open_pull_request_after_green_ci(
+                client,
+                entry(),
+                change_set,
+            )
+
+        self.assertFalse(
             any(call[0] == "create_pull_request" for call in client.calls)
         )
 
@@ -320,6 +409,7 @@ class OrchestratorTests(unittest.TestCase):
         )
         self.assertEqual("cemfirat/example-plugin", args.repository)
         self.assertFalse(args.apply)
+        self.assertFalse(args.open_pr)
 
 
 if __name__ == "__main__":

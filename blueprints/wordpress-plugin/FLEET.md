@@ -20,7 +20,7 @@ Current profiles:
 - `simple`: Doctype Inserter, At Head Tag, Widget Custom CSS Classes
 - `application`: CCF Sites & Ads WordPress Connector, WordPress Calendar Booking, WordPress Project Management
 
-The widget plugin is the first enrolled pilot. The other repositories remain `planned` until each is migrated and verified independently.
+The current inventory has five enrolled repositories. `wordpress-project-management` is intentionally `paused` until its license and distribution model are explicitly decided. The inventory file is authoritative for rollout state.
 
 ## Read-only planner
 
@@ -96,26 +96,24 @@ The proposal planner is deliberately conservative:
 - repositories marked `paused` in the fleet inventory are not fetched or changed;
 - license modes are never guessed when existing metadata is ambiguous.
 
-A later write-capable orchestrator may consume these proposals, but it must still create a focused branch/PR per target repository and rerun that repository's own checks.
+The guarded write-capable orchestrator consumes only explicitly safe proposals. It stages one repository at a time and separates branch creation from PR creation so branch CI can be verified first.
 
 ## Propagation model
 
-The next layer may turn a plan into pull-request proposals, but it must preserve these boundaries:
+The write-capable orchestrator preserves these boundaries:
 
 1. calculate drift first;
 2. show the exact proposed changes;
-3. create a short-lived branch in the target plugin;
-4. update exact-managed files and explicitly generated metadata only;
-5. run that plugin's own CI;
-6. open one focused PR;
-7. never push directly to protected `main`.
-
-A write-capable orchestrator is not part of the current fleet planner.
+3. `--apply` creates a short-lived branch and updates only allow-listed governance files;
+4. run that plugin's own branch CI;
+5. `--open-pr` verifies the branch HEAD has CI/status signals and refuses while checks are pending or non-green;
+6. open one focused PR only after green branch CI;
+7. never merge automatically and never write directly to protected `main`.
 
 ## Current rollout model
 
 Blueprint `0.2.0` introduces explicit package-root and license-mode support. The fleet target is therefore advanced to `0.2.0` only after the implementation is reviewed.
 
-Repositories already enrolled at `0.1.0` should then appear as `version-drift` until each receives its own focused upgrade PR. That drift is intentional: a blueprint contract change must never be consumed silently.
+Blueprint contract changes must never be consumed silently. Enrolled repositories may temporarily appear as `version-drift` until each receives its own focused, tested upgrade.
 
-Planned repositories remain `unenrolled` until their baseline metadata has been reviewed. In particular, nested-package and nonstandard-license repositories must use the new explicit model rather than being coerced into the root-level GPL baseline.
+Repositories marked `paused` stay outside automated writes. Nested-package and nonstandard-license repositories must use explicit metadata rather than being coerced into the root-level GPL baseline.

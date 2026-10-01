@@ -6,8 +6,9 @@ Dry-run is the default. Write mode is intentionally narrow:
 - only a fleet repository not marked paused;
 - only proposals classified safe-upgrade;
 - only the blueprint manifest and blueprint audit workflow may be changed;
-- a new branch is created from the current default-branch HEAD;
-- the tool opens a pull request and never merges it.
+- --apply creates the propagation branch and stages the reviewed changes only;
+- --open-pr refuses to open a pull request until branch CI is fully green;
+- the tool never merges a pull request.
 """
 
 from __future__ import annotations
@@ -435,6 +436,33 @@ class GitHubClient:
             },
         )
 
+    def check_runs(self, repository: str, sha: str) -> list[dict]:
+        base = self._repo_path(repository)
+        value = self._request(
+            "GET",
+            f"{base}/commits/{urllib.parse.quote(sha, safe='')}/check-runs?per_page=100",
+        )
+        runs = value.get("check_runs") if isinstance(value, dict) else None
+        if not isinstance(runs, list):
+            raise OrchestratorError("GitHub returned invalid check-runs data")
+        return runs
+
+    def combined_status(self, repository: str, sha: str) -> tuple[str | None, list[dict]]:
+        base = self._repo_path(repository)
+        value = self._request(
+            "GET",
+            f"{base}/commits/{urllib.parse.quote(sha, safe='')}/status?per_page=100",
+        )
+        if not isinstance(value, dict):
+            raise OrchestratorError("GitHub returned invalid commit-status data")
+        statuses = value.get("statuses", [])
+        state = value.get("state")
+        if not isinstance(statuses, list):
+            raise OrchestratorError("GitHub returned invalid legacy status list")
+        if state is not None and not isinstance(state, str):
+            raise OrchestratorError("GitHub returned invalid combined status state")
+        return state, statuses
+
     def create_pull_request(
         self,
         repository: str,
@@ -552,6 +580,101 @@ def apply_change_set(
             message,
         )
 
+    return {
+        "repository": repository,
+        "status": "branch-ready-for-ci",
+        "branch": branch,
+        "base_sha": base_sha,
+        "pull_request": None,
+    }
+
+
+def assert_green_branch_ci(client, repository: str, branch: str) -> str:
+    head_sha = client.branch_head(repository, branch)
+    check_runs = client.check_runs(repository, head_sha)
+    combined_state, statuses = client.combined_status(repository, head_sha)
+
+    if not check_runs and not statuses:
+        raise OrchestratorError(
+            "Refusing PR creation: no CI/status checks exist for the branch HEAD"
+        )
+
+    incomplete = [
+        run.get("name", "<unnamed>")
+        for run in check_runs
+        if run.get("status") != "completed"
+    ]
+    if incomplete:
+        raise OrchestratorError(
+            "Refusing PR creation: branch CI is still running: "
+            + ", ".join(sorted(incomplete))
+        )
+
+    accepted = {"success", "neutral", "skipped"}
+    failed = [
+        f"{run.get('name', '<unnamed>')}={run.get('conclusion')}"
+        for run in check_runs
+        if run.get("conclusion") not in accepted
+    ]
+    if failed:
+        raise OrchestratorError(
+            "Refusing PR creation: branch CI is not green: "
+            + ", ".join(sorted(failed))
+        )
+
+    if statuses and combined_state != "success":
+        raise OrchestratorError(
+            "Refusing PR creation: legacy commit status is "
+            f"{combined_state!r}, not 'success'"
+        )
+
+    return head_sha
+
+
+def open_pull_request_after_green_ci(
+    client,
+    entry: dict,
+    change_set: dict,
+) -> dict:
+    if change_set["status"] != "safe-upgrade":
+        raise OrchestratorError(
+            f"Refusing PR creation for status {change_set['status']}"
+        )
+    if not change_set["safe_to_apply"]:
+        raise OrchestratorError("Proposal is not marked safe_to_apply")
+    if entry["rollout"] == "paused":
+        raise OrchestratorError("Refusing PR creation for a paused repository")
+    if not change_set["changes"]:
+        return {
+            "repository": entry["repository"],
+            "status": "no-change",
+            "pull_request": None,
+        }
+
+    target_version = change_set["target_blueprint_version"]
+    branch = branch_name_for(target_version)
+    repository = entry["repository"]
+    base_branch = entry["default_branch"]
+
+    if not client.branch_exists(repository, branch):
+        raise OrchestratorError(
+            f"Propagation branch does not exist: {repository}:{branch}; "
+            "run --apply first"
+        )
+
+    for change in change_set["changes"]:
+        live_content, _ = client.get_file(
+            repository,
+            change["path"],
+            branch,
+        )
+        if live_content != change["content"]:
+            raise OrchestratorError(
+                f"Propagation branch drift at {change['path']}; "
+                "regenerate and restage the proposal"
+            )
+
+    head_sha = assert_green_branch_ci(client, repository, branch)
     pr_url = client.create_pull_request(
         repository,
         f"chore: upgrade WordPress blueprint to {target_version}",
@@ -559,20 +682,22 @@ def apply_change_set(
         base_branch,
         (
             "Automated blueprint upgrade proposal.\n\n"
-            f"Target blueprint: `{target_version}`\n\n"
+            f"Target blueprint: `{target_version}`\n"
+            f"Verified green branch HEAD: `{head_sha}`\n\n"
             "Safety boundaries:\n"
             "- generated from an explicitly safe migration\n"
             "- changes only blueprint control files\n"
+            "- branch CI was fully green before this PR was opened\n"
             "- does not modify plugin feature code\n"
             "- does not merge automatically\n"
-            "- target repository CI/review remains authoritative\n"
+            "- target repository PR CI/review remains authoritative\n"
         ),
     )
     return {
         "repository": repository,
         "status": "pull-request-created",
         "branch": branch,
-        "base_sha": base_sha,
+        "head_sha": head_sha,
         "pull_request": pr_url,
     }
 
@@ -609,7 +734,17 @@ def build_parser() -> argparse.ArgumentParser:
         / "wordpress-plugin"
         / "releases.json",
     )
-    parser.add_argument("--apply", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Create and update the propagation branch, but do not open a PR.",
+    )
+    mode.add_argument(
+        "--open-pr",
+        action="store_true",
+        help="Open the PR only after the staged branch CI is fully green.",
+    )
     parser.add_argument("--format", choices=("text", "json"), default="text")
     parser.add_argument(
         "--read-token-env",
@@ -641,9 +776,9 @@ def main(argv: list[str] | None = None) -> int:
                 inventory["target_blueprint_version"],
                 releases,
             )
-            if args.apply:
+            if args.apply or args.open_pr:
                 raise OrchestratorError(
-                    "Write mode is forbidden for paused repositories"
+                    "Write/PR mode is forbidden for paused repositories"
                 )
         else:
             read_token = os.environ.get(args.read_token_env) or None
@@ -676,11 +811,12 @@ def main(argv: list[str] | None = None) -> int:
                 releases,
             )
 
-            if args.apply:
+            if args.apply or args.open_pr:
                 write_token = os.environ.get(args.write_token_env)
                 if not write_token:
+                    mode_name = "--apply" if args.apply else "--open-pr"
                     raise OrchestratorError(
-                        f"--apply requires explicit token in "
+                        f"{mode_name} requires explicit token in "
                         f"{args.write_token_env}"
                     )
                 writer = GitHubClient(
@@ -688,13 +824,20 @@ def main(argv: list[str] | None = None) -> int:
                     api_base=args.api_base,
                     timeout=args.timeout,
                 )
-                value = apply_change_set(
-                    writer,
-                    entry,
-                    manifest,
-                    workflow_text,
-                    value,
-                )
+                if args.apply:
+                    value = apply_change_set(
+                        writer,
+                        entry,
+                        manifest,
+                        workflow_text,
+                        value,
+                    )
+                else:
+                    value = open_pull_request_after_green_ci(
+                        writer,
+                        entry,
+                        value,
+                    )
     except (fleet.FleetError, OrchestratorError) as exc:
         if args.format == "json":
             print(json.dumps({"status": "error", "error": str(exc)}, indent=2))

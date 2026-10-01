@@ -47,6 +47,12 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 - `blueprints/wordpress-plugin/plugin-check/`  
   Optional distribution-aware wrapper around the official WordPress Plugin Check action. It runs against built/installable plugin contents and derives the appropriate category set from the plugin manifest.
 
+## Handbook / Wiki
+
+A concise operator handbook is version-controlled in [`wiki/`](wiki/). The handbook explains daily workflows; the technical source of truth remains the standards, blueprints, scripts, rulesets and tests in this repository.
+
+`.github/workflows/publish-wiki.yml` mirrors that source to the repository's GitHub Wiki. GitHub requires the Wiki backend to be initialized once by creating its first page. Until then, the publish workflow exits successfully with a notice instead of producing a failed run. The first Wiki edit triggers the `gollum` event and publishes the complete handbook.
+
 ## Requirements
 
 - Bash
