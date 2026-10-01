@@ -50,8 +50,13 @@ def main() -> int:
                 errors.append(f"empty wiki page: {path.name}")
 
         sidebar = (WIKI / "_Sidebar.md").read_text(encoding="utf-8")
-        for filename in sorted(REQUIRED - {"_Sidebar.md", "_Footer.md"}):
-            title = Path(filename).stem.replace("-", " ")
+        titles = {
+            filename: Path(filename).stem.replace("-", " ")
+            for filename in REQUIRED - {"_Sidebar.md", "_Footer.md"}
+        }
+        titles["Governance-aendern.md"] = "Governance ändern"
+        for filename in sorted(titles):
+            title = titles[filename]
             if f"[[{title}]]" not in sidebar:
                 errors.append(f"sidebar does not link to: {title}")
 
