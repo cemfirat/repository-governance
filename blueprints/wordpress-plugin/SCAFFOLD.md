@@ -11,6 +11,7 @@ It is intentionally conservative:
 - it requires an explicit distribution/update model;
 - it generates only a minimal plugin entry point;
 - it runs the existing blueprint audit before exposing the generated directory;
+- the generated blueprint workflow runs on every branch push and pull request so branch CI can be green before a PR is opened;
 - block-plugin source scaffolding remains delegated to the official WordPress `@wordpress/create-block` toolchain.
 
 ## Simple plugin

@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 WIKI = ROOT / "wiki"
 REQUIRED = {
     "Home.md",
+    "Erste-Schritte.md",
+    "Glossar.md",
     "Arbeitsablauf.md",
     "Neues-WordPress-Plugin.md",
     "Bestehendes-Plugin-aktualisieren.md",
@@ -65,6 +67,21 @@ def main() -> int:
             errors.append("Home.md is missing the branch-CI-before-PR rule")
         if "technische Quelle der Wahrheit" not in home:
             errors.append("Home.md is missing the source-of-truth boundary")
+
+        first_steps = (WIKI / "Erste-Schritte.md").read_text(encoding="utf-8")
+        if "klonst Du Governance nicht nochmals" not in first_steps:
+            errors.append("Erste-Schritte.md must explain that governance is cloned only once")
+
+        new_plugin = (WIKI / "Neues-WordPress-Plugin.md").read_text(encoding="utf-8")
+        required_new_plugin_markers = (
+            "git clone https://github.com/cemfirat/repository-governance.git",
+            "python3 scripts/wordpress-plugin-scaffold.py",
+            "git push -u origin main",
+            "Ohne Clone und ohne Terminal",
+        )
+        for marker in required_new_plugin_markers:
+            if marker not in new_plugin:
+                errors.append(f"Neues-WordPress-Plugin.md is missing: {marker}")
 
     if errors:
         for error in errors:

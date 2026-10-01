@@ -49,7 +49,7 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
 
 ## Handbook / Wiki
 
-A concise operator handbook is version-controlled in [`wiki/`](wiki/). The handbook explains daily workflows; the technical source of truth remains the standards, blueprints, scripts, rulesets and tests in this repository.
+A concise operator handbook is version-controlled in [`wiki/`](wiki/). The handbook explains daily workflows; the technical source of truth remains the standards, blueprints, scripts, rulesets and tests in this repository. New users should start with [`wiki/Erste-Schritte.md`](wiki/Erste-Schritte.md).
 
 `.github/workflows/publish-wiki.yml` mirrors that source to the repository's initialized GitHub Wiki. For matching feature-branch pushes, the workflow validates the handbook and performs an authenticated Wiki clone plus `git push --dry-run` so Git access is proven before a pull request is opened. Actual Wiki publication is restricted to `main`; main changes and Wiki `gollum` events keep the published handbook synchronized.
 

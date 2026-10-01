@@ -1,14 +1,19 @@
 ## Mini-Handbuch
 
 - [[Home]]
-- [[Arbeitsablauf]]
+- [[Erste Schritte]]
 - [[Neues WordPress Plugin]]
+- [[Arbeitsablauf]]
 - [[Bestehendes Plugin aktualisieren]]
 - [[Plugin Profile]]
+- [[Rote CI beheben]]
+- [[Glossar]]
+
+### Qualität und Betrieb
+
 - [[WordPress Plugin Check]]
 - [[WordPress Playground]]
 - [[Releases und Updates]]
-- [[Rote CI beheben]]
 - [[Governance ändern]]
 - [[Entscheidungsgrenzen]]
 - [[Technische Referenz]]
