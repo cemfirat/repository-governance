@@ -1,0 +1,1 @@
+**Repository Governance** · Das Wiki ist die Bedienungsanleitung. Verbindlich sind die versionierten Standards, Blueprints, Skripte und Tests im Repository.

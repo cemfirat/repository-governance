@@ -1,0 +1,77 @@
+name: Publish handbook wiki
+
+on:
+  workflow_dispatch:
+  gollum:
+  push:
+    branches:
+      - main
+    paths:
+      - "wiki/**"
+      - "scripts/validate-wiki-handbook.py"
+      - ".github/workflows/publish-wiki.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repository-governance-wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish GitHub Wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out governance source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate handbook source
+        run: python3 scripts/validate-wiki-handbook.py
+
+      - name: Check whether GitHub Wiki is initialized
+        id: wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WIKI_URL="https://github.com/${GITHUB_REPOSITORY}.wiki.git"
+          if git -c "http.extraHeader=AUTHORIZATION: bearer ${GH_TOKEN}"             ls-remote "${WIKI_URL}" >/dev/null 2>&1; then
+            echo "initialized=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "initialized=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice::GitHub Wiki is not initialized yet. Create the first Home page once in the GitHub UI; the resulting gollum event will rerun this workflow and publish the full handbook."
+          fi
+
+      - name: Publish version-controlled handbook
+        if: steps.wiki.outputs.initialized == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WIKI_URL="https://github.com/${GITHUB_REPOSITORY}.wiki.git"
+          TARGET="${RUNNER_TEMP}/repository-governance-wiki"
+
+          git -c "http.extraHeader=AUTHORIZATION: bearer ${GH_TOKEN}"             clone "${WIKI_URL}" "${TARGET}"
+
+          find "${TARGET}" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R wiki/. "${TARGET}/"
+
+          cd "${TARGET}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Wiki already matches the version-controlled handbook."
+            exit 0
+          fi
+
+          git commit -m "Sync handbook from repository-governance ${GITHUB_SHA}"
+          git -c "http.extraHeader=AUTHORIZATION: bearer ${GH_TOKEN}"             push origin HEAD

@@ -31,6 +31,7 @@ jobs:
           scripts/wordpress-plugin-pr-orchestrator.py
           scripts/wordpress-plugin-scaffold.py
           scripts/wordpress-plugin-check-policy.py
+          scripts/validate-wiki-handbook.py
           tests/test_wordpress_plugin_blueprint.py
           tests/test_wordpress_plugin_fleet.py
           tests/test_wordpress_plugin_upgrade_plan.py
@@ -40,6 +41,9 @@ jobs:
 
       - name: Run WordPress blueprint unit tests
         run: python3 -m unittest discover -s tests -p 'test_wordpress_plugin_*.py' -v
+
+      - name: Validate handbook wiki source
+        run: python3 scripts/validate-wiki-handbook.py
 
       - name: Validate hard guardrails policy
         run: |
