@@ -20,7 +20,16 @@ Current profiles:
 - `simple`: Doctype Inserter, At Head Tag, Widget Custom CSS Classes
 - `application`: CCF Sites & Ads WordPress Connector, WordPress Calendar Booking, WordPress Project Management
 
-The widget plugin is the first enrolled pilot. The other repositories remain `planned` until each is migrated and verified independently.
+The widget plugin was the first enrolled pilot. The current 0.2.0 rollout is now established across the reviewed fleet:
+
+- `wordpress-widget-custom-css-classes` — enrolled, simple profile;
+- `wordpress-doctype-Inserter` — enrolled, simple profile;
+- `wordpress-at-head-tag` — enrolled, simple profile;
+- `wordpress-calendar-booking` — enrolled, application profile;
+- `ccf-sites-ads-wordpress-connector` — enrolled, application profile with nested package root and declared-license model;
+- `wordpress-project-management` — intentionally paused until license/distribution metadata is explicitly decided.
+
+Enrollment means the repository has an explicit manifest and consumes the reviewed shared blueprint. Optional quality gates such as Plugin Check remain repository-specific and must be proven before becoming required.
 
 ## Read-only planner
 
@@ -96,26 +105,34 @@ The proposal planner is deliberately conservative:
 - repositories marked `paused` in the fleet inventory are not fetched or changed;
 - license modes are never guessed when existing metadata is ambiguous.
 
-A later write-capable orchestrator may consume these proposals, but it must still create a focused branch/PR per target repository and rerun that repository's own checks.
+The guarded write-capable orchestrator can consume reviewed proposals one repository at a time. It defaults to dry-run, creates a focused branch rather than writing to protected `main`, never auto-merges, and leaves the target repository's own branch/PR CI as merge authority.
 
 ## Propagation model
 
-The next layer may turn a plan into pull-request proposals, but it must preserve these boundaries:
+The guarded PR orchestrator is implemented, but it preserves these boundaries:
 
 1. calculate drift first;
 2. show the exact proposed changes;
 3. create a short-lived branch in the target plugin;
 4. update exact-managed files and explicitly generated metadata only;
-5. run that plugin's own CI;
-6. open one focused PR;
-7. never push directly to protected `main`.
+5. run that plugin's own branch CI;
+6. open one focused PR only after branch CI is green;
+7. require PR CI/review before merge;
+8. never push directly to protected `main`;
+9. never auto-merge.
 
-A write-capable orchestrator is not part of the current fleet planner.
+The account-wide working rule is explicit: **no PR before green branch CI**.
 
 ## Current rollout model
 
-Blueprint `0.2.0` introduces explicit package-root and license-mode support. The fleet target is therefore advanced to `0.2.0` only after the implementation is reviewed.
+Blueprint `0.2.0` is the active fleet target. All reviewed repositories except the explicitly paused Project Management plugin are enrolled at that version.
 
-Repositories already enrolled at `0.1.0` should then appear as `version-drift` until each receives its own focused upgrade PR. That drift is intentional: a blueprint contract change must never be consumed silently.
+The rollout remains intentionally profile- and repository-aware:
 
-Planned repositories remain `unenrolled` until their baseline metadata has been reviewed. In particular, nested-package and nonstandard-license repositories must use the new explicit model rather than being coerced into the root-level GPL baseline.
+- simple plugins may use the shared distribution-aware official WordPress Plugin Check once deterministic package contents are proven;
+- application plugins may use a lighter branch-readiness gate when running their entire integration matrix on every branch push would be wasteful;
+- `wordpress-calendar-booking` keeps its comprehensive CI on PR/`main` and uses focused pre-PR branch readiness; Plugin Check remediation is tracked separately in its issue #219 after the first packaged pilot exposed existing findings;
+- the CCF Sites & Ads connector keeps its explicit declared/proprietary license model and does not silently inherit GPL- or WordPress.org-specific assumptions;
+- `wordpress-project-management` stays paused until license and distribution metadata are decided explicitly.
+
+A future blueprint version must again appear as reviewable fleet drift. Contract changes are never consumed silently.
