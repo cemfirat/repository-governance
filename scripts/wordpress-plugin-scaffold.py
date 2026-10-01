@@ -289,8 +289,6 @@ def render_workflow(action_sha: str) -> str:
 on:
   pull_request:
   push:
-    branches:
-      - main
 
 permissions:
   contents: read

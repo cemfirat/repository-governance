@@ -96,6 +96,8 @@ class WordPressPluginScaffoldTests(unittest.TestCase):
                 f"repository-governance/blueprints/wordpress-plugin@{action_sha}",
                 workflow,
             )
+            self.assertIn("on:\n  pull_request:\n  push:\n", workflow)
+            self.assertNotIn("branches:", workflow)
 
     def test_nested_application_declared_license_audits_clean(self):
         with tempfile.TemporaryDirectory() as temp:
