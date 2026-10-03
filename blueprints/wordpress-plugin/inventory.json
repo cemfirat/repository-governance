@@ -11,6 +11,12 @@
       "rollout": "enrolled"
     },
     {
+      "repository": "cemfirat/verudo",
+      "default_branch": "main",
+      "desired_profile": "application",
+      "rollout": "enrolled"
+    },
+    {
       "repository": "cemfirat/wordpress-doctype-Inserter",
       "default_branch": "main",
       "desired_profile": "simple",
