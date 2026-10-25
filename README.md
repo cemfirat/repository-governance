@@ -17,12 +17,30 @@ Public and private repositories use the same technical protection. Explicit prof
 
 ## Einfacher Schnellstart fuer vorhandene Repositories
 
+### Lokaler Speicherort auf meinem Mac
+
+Die bereits vorhandene Arbeitskopie von `repository-governance` liegt auf diesem Mac hier:
+
+`/Users/cemfirat/CCF/Klientel/CCF Development/GitHub/repository-governance`
+
+**Im Finder oeffnen:** `⌘ + ⇧ + G` druecken, den Pfad einfuegen und mit Enter bestaetigen.
+
+**Im Terminal verwenden** (die Anfuehrungszeichen sind wegen des Leerzeichens in `CCF Development` wichtig):
+
+```bash
+cd "$HOME/CCF/Klientel/CCF Development/GitHub/repository-governance"
+git pull --ff-only
+./scripts/setup.sh --all
+```
+
+`--all` zeigt nur den Status deiner Repositories und aendert keine Einstellungen. **Nicht erneut klonen**, wenn dieser Ordner bereits existiert. Dieser Pfad ist ein persoenlicher Speicherort; auf einem anderen Mac kann er anders sein.
 **Kein weiteres Repository notwendig:** Alle Regeln und Werkzeuge bleiben zentral in `repository-governance`. Fuer ein vorhandenes GitHub-Repository:
 
 ```bash
 # Einmal auf dem Mac:
 brew install gh
 gh auth login
+# Nur falls das Repository noch nicht lokal vorhanden ist:
 git clone https://github.com/cemfirat/repository-governance.git
 cd repository-governance
 
