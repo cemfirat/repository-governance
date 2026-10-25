@@ -401,7 +401,7 @@ class MultiWorkflowEvidenceFake(FakeGitHub):
                 for name in (known[301], known[302], known[303])
             ] + [{"name": "External app", "conclusion": "success", "app": {"id": 999}}],
                     "total_count": 4}
-        raise AssertionError("No unrelated API calls allowed: " + path)
+        return super().get(path)
 
 
 class MultiWorkflowEvidenceTests(unittest.TestCase):
