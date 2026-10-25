@@ -15,6 +15,34 @@ The policy is intentionally split into two rulesets:
 
 Public and private repositories use the same technical protection. Explicit profiles prevent accidentally configuring the wrong visibility.
 
+## Einfacher Schnellstart fuer vorhandene Repositories
+
+**Kein weiteres Repository notwendig:** Alle Regeln und Werkzeuge bleiben zentral in `repository-governance`. Fuer ein vorhandenes GitHub-Repository:
+
+```bash
+# Einmal auf dem Mac:
+brew install gh
+gh auth login
+git clone https://github.com/cemfirat/repository-governance.git
+cd repository-governance
+
+# Bei spaeteren Aufrufen zuerst: git pull --ff-only
+./scripts/setup.sh cemfirat/mein-projekt
+```
+
+Das Werkzeug erkennt die Sichtbarkeit (public/private), bestehende Rulesets und echte bereits erfolgreiche GitHub-Actions-PR-Checks. Es zeigt **vor jeder Aenderung** die konkreten Schritte und fragt erst danach im Terminal nach `ja`. In Skripten ohne Terminal wird nicht automatisch geschrieben. Es aktualisiert auch bereits vorhandene Standard-Rulesets, ohne deren weitere Checks oder strengere Sonderregeln still zu ersetzen.
+
+```bash
+./scripts/setup.sh cemfirat/mein-projekt --dry-run   # Nur pruefen
+./scripts/setup.sh --all                             # Alle eigenen Repositories NUR LESEN
+./scripts/setup.sh cemfirat/mein-projekt --check "Real CI Job"
+./scripts/setup.sh cemfirat/mein-projekt --yes       # Bewusst ohne Rueckfrage
+```
+
+**Wichtig:** Der Check muss vorher in einem erfolgreichen Pull-Request-Lauf von GitHub Actions tatsaechlich gelaufen sein. Ein neues/leeres Repository ohne echte PR-CI wird **nicht** durch einen fiktiven Pflichtcheck blockiert; erst die passende Projekt-CI einrichten und einen PR testen. Wenn mehrere passende Checks existieren, `--check` verwenden. Bestehende Sonder-Rulesets, Forks, archivierte Repositories, Default-Branches ohne `main` und zuvor eingerichtete menschliche Review-Pflichten werden zur manuellen Pruefung markiert. `--all` ist prinzipiell read-only, auch mit vielen Projekten.
+
+[Ausfuehrliche deutschsprachige Schritt-fuer-Schritt-Anleitung](wiki/Neue-Repositories-absichern.md).
+
 ## Repository layout
 
 - `rulesets/main-protection-hard-guardrails.json`  

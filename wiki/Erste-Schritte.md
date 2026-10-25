@@ -121,6 +121,8 @@ Bis dieser Weg entwickelt und getestet ist, ist der oben beschriebene lokale Sca
 
 ## Neues allgemeines GitHub-Repository (public oder private)
 
+**Am einfachsten ist jetzt [setup.sh](Neue-Repositories-absichern.md):** Es erkennt Public/Private und vorhandene CI automatisch und prueft alle Einstellungen vor dem Speichern. Die untenstehenden alten Profil-Befehle bleiben fuer fortgeschrittene Anwendungsfaelle verfuegbar.
+
 Für ein **neues allgemeines Repository** gibt es jetzt zwei geprüfte Governance-Profile (`profiles/public.json` und `profiles/private.json`). Beide verlangen Pull Requests, grüne echte CI-Tests und verbieten normale Umgehungen. Ein zweiter menschlicher Reviewer ist nicht vorgeschrieben.
 
 Du brauchst eine passende **Projektvorlage mit echtem CI-Job** (z. B. WordPress/PHP) und `gh auth login`. `repository-governance` selbst bleibt die zentrale Regelquelle, nicht die Kopiervorlage für Anwendungsdateien.
