@@ -32,6 +32,8 @@ jobs:
           scripts/wordpress-plugin-scaffold.py
           scripts/wordpress-plugin-check-policy.py
           scripts/validate-wiki-handbook.py
+          scripts/repository_setup.py
+          tests/test_repository_setup.py
           tests/test_wordpress_plugin_blueprint.py
           tests/test_wordpress_plugin_fleet.py
           tests/test_wordpress_plugin_upgrade_plan.py
@@ -78,10 +80,13 @@ jobs:
           done
 
       - name: Validate shell syntax
-        run: bash -n scripts/apply-rulesets.sh scripts/create-protected-repository.sh
+        run: bash -n scripts/apply-rulesets.sh scripts/create-protected-repository.sh scripts/setup.sh
 
       - name: Test repository ruleset profiles
         run: python3 -m unittest discover -s tests -p 'test_ruleset_profiles.py' -v
+
+      - name: Test safe repository setup (offline)
+        run: python3 -m unittest discover -s tests -p 'test_repository_setup.py' -v
 
       - name: Exercise dry-run without GitHub authentication
         run: |
