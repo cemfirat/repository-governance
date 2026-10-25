@@ -374,5 +374,56 @@ class SafeBatchTests(unittest.TestCase):
         self.assertTrue(all(not actions for actions in gh.all_writes().values()))
 
 
+class MultiWorkflowEvidenceFake(FakeGitHub):
+    """Three successful workflows on one PR SHA, plus irrelevant old PR evidence."""
+    def get(self, path):
+        base = "repos/" + self.name
+        head = "b" * 40
+        if path == base + "/actions/runs?event=pull_request&per_page=30":
+            return {"workflow_runs": [
+                {"id": 301, "head_sha": head, "event": "pull_request", "conclusion": "success"},
+                {"id": 302, "head_sha": head, "event": "pull_request", "conclusion": "success"},
+                {"id": 303, "head_sha": head, "event": "pull_request", "conclusion": "success"},
+                {"id": 201, "head_sha": "c" * 40, "event": "pull_request", "conclusion": "success"},
+            ]}
+        known = {
+            301: "PHP 8.3 regression",
+            302: "Official WordPress Plugin Check",
+            303: "WordPress plugin blueprint",
+            201: "Outdated unrelated check",
+        }
+        for run_id, job in known.items():
+            if path == base + f"/actions/runs/{run_id}/jobs?per_page=100":
+                return {"jobs": [{"name": job, "conclusion": "success"}], "total_count": 1}
+        if path == base + "/commits/" + head + "/check-runs?per_page=100":
+            return {"check_runs": [
+                {"name": name, "conclusion": "success", "app": {"id": 15368}}
+                for name in (known[301], known[302], known[303])
+            ] + [{"name": "External app", "conclusion": "success", "app": {"id": 999}}],
+                    "total_count": 4}
+        raise AssertionError("No unrelated API calls allowed: " + path)
+
+
+class MultiWorkflowEvidenceTests(unittest.TestCase):
+    def test_successful_jobs_from_same_pr_sha_are_aggregated(self):
+        gh = MultiWorkflowEvidenceFake()
+        wanted = ["Official WordPress Plugin Check",
+                  "PHP 8.3 regression", "WordPress plugin blueprint"]
+        self.assertEqual(setup.successful_pr_checks(gh, gh.name), wanted)
+        plan = setup.inspect(gh, gh.name, requested_checks=wanted)
+        self.assertFalse(plan.blockers)
+        self.assertEqual([x["context"] for x in setup.required_checks(plan.actions[1].payload)],
+                         wanted)
+
+    def test_different_pr_shas_and_external_apps_are_not_mixed(self):
+        gh = MultiWorkflowEvidenceFake()
+        allowed = setup.successful_pr_checks(gh, gh.name)
+        self.assertNotIn("Outdated unrelated check", allowed)
+        self.assertNotIn("External app", allowed)
+        rejected = setup.inspect(gh, gh.name, requested_checks=["Outdated unrelated check"])
+        self.assertTrue(rejected.blockers)
+        self.assertEqual(rejected.actions, [])
+
+
 if __name__ == "__main__":
     unittest.main()

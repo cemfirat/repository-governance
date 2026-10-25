@@ -148,41 +148,51 @@ def verify_main_target(rule: dict[str, Any]) -> bool:
 
 
 def successful_pr_checks(client: GitHub, repo: str) -> list[str]:
-    """Use a real successful PR run AND matching GitHub Actions check-runs.
+    """Prove job names using successful PR workflows on one identical commit SHA.
 
-    This is evidence of an existing check name, not proof that future PRs will
-    execute every workflow; a first real PR should still test branch protection.
+    A PR may run several independent workflows (regressions, plugin-check,
+    blueprint). Collect their successful jobs together, never mixing results
+    from different commits, and corroborate each with GitHub Actions check-runs.
+    This is evidence of names, not proof of all future CI trigger conditions.
     """
     runs = client.get(f"repos/{repo}/actions/runs?event=pull_request&per_page=30")
     recent = runs.get("workflow_runs", [])
     if not isinstance(recent, list):
         raise SetupError("Unerwartetes GitHub Actions-Format")
+
+    target_sha: str | None = None
+    same_commit_runs: list[dict[str, Any]] = []
     for run in recent:
-        if run.get("event") != "pull_request" or run.get("conclusion") != "success":
+        if (run.get("event") != "pull_request" or run.get("conclusion") != "success"
+                or not run.get("id") or not run.get("head_sha")):
             continue
-        run_id, sha = run.get("id"), run.get("head_sha")
-        if not run_id or not sha:
-            continue
-        jobs = client.get(f"repos/{repo}/actions/runs/{run_id}/jobs?per_page=100")
+        if target_sha is None:
+            target_sha = run["head_sha"]
+        if run["head_sha"] == target_sha:
+            same_commit_runs.append(run)
+
+    if target_sha is None:
+        return []
+
+    passed_jobs: set[str] = set()
+    for run in same_commit_runs:
+        jobs = client.get(f"repos/{repo}/actions/runs/{run['id']}/jobs?per_page=100")
         if jobs.get("total_count", 0) > len(jobs.get("jobs", [])):
             raise SetupError("CI-Jobliste hat mehr als 100 Eintraege; manuell pruefen")
-        complete_jobs = {
+        passed_jobs.update(
             job["name"] for job in jobs.get("jobs", [])
             if job.get("conclusion") == "success" and job.get("name")
-        }
-        check_runs = client.get(f"repos/{repo}/commits/{sha}/check-runs?per_page=100")
-        if check_runs.get("total_count", 0) > len(check_runs.get("check_runs", [])):
-            raise SetupError("CI-Checkliste hat mehr als 100 Eintraege; manuell pruefen")
-        actions_checks = {
-            run["name"] for run in check_runs.get("check_runs", [])
-            if run.get("conclusion") == "success"
-            and run.get("app", {}).get("id") == GITHUB_ACTIONS_APP_ID
-        }
-        matches = sorted(complete_jobs & actions_checks)
-        if matches:
-            return matches
-    return []
+        )
 
+    check_runs = client.get(f"repos/{repo}/commits/{target_sha}/check-runs?per_page=100")
+    if check_runs.get("total_count", 0) > len(check_runs.get("check_runs", [])):
+        raise SetupError("CI-Checkliste hat mehr als 100 Eintraege; manuell pruefen")
+    actions_checks = {
+        check["name"] for check in check_runs.get("check_runs", [])
+        if check.get("conclusion") == "success"
+        and check.get("app", {}).get("id") == GITHUB_ACTIONS_APP_ID
+    }
+    return sorted(passed_jobs & actions_checks)
 
 def required_checks(rule: dict[str, Any]) -> list[dict[str, Any]]:
     matches = [x for x in rule.get("rules", []) if x.get("type") == "required_status_checks"]
