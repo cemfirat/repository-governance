@@ -181,6 +181,21 @@ class SafeSetupTests(unittest.TestCase):
             setup.apply_plan(gh, plan, [])
         self.assertEqual(gh.writes, [])
 
+    def test_branch_move_after_first_hard_guard_creation_prevents_second_write(self):
+        gh = FakeGitHub(ci=("test",))
+        plan = setup.inspect(gh, gh.name)
+        old_post = gh.post
+        def move_branch_after_first_post(path, payload):
+            result = old_post(path, payload)
+            gh.main_sha = "f" * 40
+            return result
+        gh.post = move_branch_after_first_post
+        with self.assertRaisesRegex(setup.SetupError, "vor dem Schreiben"):
+            setup.apply_plan(gh, plan, [])
+        # The new hard guard remains in place, but no merge gate is silently
+        # created against an unexpectedly changed branch.
+        self.assertEqual(gh.writes, ["POST"])
+
     def test_preview_and_all_are_read_only(self):
         gh = FakeGitHub()
         with redirect_stdout(StringIO()) as output:

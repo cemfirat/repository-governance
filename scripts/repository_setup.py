@@ -393,7 +393,9 @@ def verify_action(client: GitHub, repo: str, action: Action, ruleset_id: int) ->
         if not params.get("strict_required_status_checks_policy"):
             raise SetupError("Die GitHub-CI-Sperre ist nicht strict")
         checks = params.get("required_status_checks", [])
-        if not checks or checks != required_checks(action.payload):
+        expected = required_checks(action.payload)
+        identity = lambda c: (c.get("context"), c.get("integration_id"))
+        if not checks or sorted(map(identity, checks)) != sorted(map(identity, expected)):
             raise SetupError("Erforderliche CI-Checks wurden nicht wie geplant gespeichert")
 
 
@@ -405,6 +407,10 @@ def apply_plan(client: GitHub, plan: Inspection, selected_checks: list[str] | No
     ] != [(x.name, x.operation, x.payload) for x in plan.actions]:
         raise SetupError("Repository hat sich seit der Vorschau geaendert. Bitte setup.sh erneut starten.")
     for action in plan.actions:
+        # A different agent may move main after our initial reinspection.
+        latest_sha = client.get(f"repos/{plan.name}/branches/main").get("commit", {}).get("sha")
+        if latest_sha != plan.branch_sha:
+            raise SetupError("main wurde vor dem Schreiben geaendert. Bitte neu pruefen.")
         print(f"Speichere {action.name} ...")
         endpoint = f"repos/{plan.name}/rulesets"
         if action.operation == "PUT":
