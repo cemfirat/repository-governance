@@ -118,3 +118,19 @@ Er erfindet keine Plugin-Funktion, keine Lizenzentscheidung und keinen nicht vor
 Dieser Komfortweg ist **noch nicht implementiert**. Das Ziel ist später ein geführter GitHub-Ablauf, bei dem Name, Slug, Profil, Lizenz und Distribution eingegeben werden und Governance daraus das Repository erzeugt.
 
 Bis dieser Weg entwickelt und getestet ist, ist der oben beschriebene lokale Scaffold der verbindliche Ablauf.
+
+## Neues allgemeines GitHub-Repository (public oder private)
+
+Für ein **neues allgemeines Repository** gibt es jetzt zwei geprüfte Governance-Profile (`profiles/public.json` und `profiles/private.json`). Beide verlangen Pull Requests, grüne echte CI-Tests und verbieten normale Umgehungen. Ein zweiter menschlicher Reviewer ist nicht vorgeschrieben.
+
+Du brauchst eine passende **Projektvorlage mit echtem CI-Job** (z. B. WordPress/PHP) und `gh auth login`. `repository-governance` selbst bleibt die zentrale Regelquelle, nicht die Kopiervorlage für Anwendungsdateien.
+
+```bash
+# Public:
+bash scripts/create-protected-repository.sh cemfirat/neues-public --profile public --template cemfirat/mein-projekt-template --check test
+
+# Private:
+bash scripts/create-protected-repository.sh cemfirat/neues-private --profile private --template cemfirat/mein-projekt-template --check test
+```
+
+Damit wird das neue Repo über die GitHub CLI erstellt und werden seine Schutzregeln in **einem Aufruf** eingerichtet. Eine normale Erstellung über GitHubs Website übernimmt Einstellungen dagegen nicht. Mehr Details im [README](../README.md).

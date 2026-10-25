@@ -22,7 +22,9 @@ Please avoid adding organization-specific secrets, internal repository names, cr
    ```bash
    jq empty rulesets/*.json
    bash -n scripts/apply-rulesets.sh
-   bash scripts/apply-rulesets.sh example/repository --dry-run >/dev/null
+   bash scripts/apply-rulesets.sh example/repository --profile private --dry-run >/dev/null
+   bash scripts/create-protected-repository.sh example/new --profile public --template example/starter --dry-run >/dev/null
+   python3 -m unittest discover -s tests -p 'test_ruleset_profiles.py' -v
    ```
 
 4. Open a pull request and explain the policy or behavior change.

@@ -1,0 +1,7 @@
+{
+  "profile": "private",
+  "visibility": "private",
+  "default_required_checks": [
+    "test"
+  ]
+}

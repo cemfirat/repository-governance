@@ -11,9 +11,9 @@
 The policy is intentionally split into two rulesets:
 
 - **Hard guardrails** protect `main` from deletion and force-pushes with **no bypass actors**.
-- **Merge gates** require pull requests and can optionally require repository-specific CI checks. The built-in `Maintain` and `Repository admin` roles may bypass these merge gates.
+- **Merge gates** require pull requests, real passing GitHub Actions CI checks, up-to-date branches and resolved discussions. **No administrator bypass** and **0 mandatory reviewers** for the solo-owner/AI-agent workflow.
 
-Keeping destructive protections separate from merge bypasses prevents an emergency merge bypass from also allowing deletion or force-pushes on `main`.
+Public and private repositories use the same technical protection. Explicit profiles prevent accidentally configuring the wrong visibility.
 
 ## Repository layout
 
@@ -21,10 +21,16 @@ Keeping destructive protections separate from merge bypasses prevents an emergen
   Non-bypassable deletion and force-push protection for `main`.
 
 - `rulesets/main-protection-merge-gates-base.json`  
-  Pull-request gate for `main`. Repository-specific required status checks are intentionally omitted from the base template.
+  Secure PR and mandatory GitHub Actions CI rules with no bypass.
+
+- `profiles/public.json` / `profiles/private.json`  
+  Public/private visibility profiles; each requires a real CI check (default `test`).
 
 - `scripts/apply-rulesets.sh`  
-  Applies both templates with the GitHub CLI and can add required status checks at creation time.
+  Applies and verifies both rulesets on a matching existing repository.
+
+- `scripts/create-protected-repository.sh`  
+  One-command creation from a project-specific GitHub template plus automatic protection.
 
 - `.github/workflows/validate.yml`  
   Validates the templates and helper scripts on every branch push and on pull requests. This keeps the repository aligned with the rule that branch CI must be green before a PR is opened.
@@ -69,66 +75,54 @@ gh auth login
 
 If you want to make CI checks required, run CI at least once in the target repository so the check names are known.
 
-## Usage
+## New public or private repository — one command
 
-Preview the payloads without contacting GitHub:
+GitHub *project templates* copy files and workflows, **not repository Settings or Rulesets**. Governance stays the central policy source; your application must come from an actual language/project-specific GitHub template with working CI.
 
-```bash
-bash scripts/apply-rulesets.sh OWNER/REPO --dry-run
-```
-
-Create the two base rulesets:
+Run one of these commands in the checked-out `repository-governance` folder after `gh auth login`:
 
 ```bash
-bash scripts/apply-rulesets.sh OWNER/REPO
+bash scripts/create-protected-repository.sh OWNER/new-public --profile public --template OWNER/my-project-template --check test
+bash scripts/create-protected-repository.sh OWNER/new-private --profile private --template OWNER/my-project-template --check test
 ```
 
-Create them and require one or more status checks:
+The project template must be marked as a GitHub template, use `main` and contain real Actions workflows with the named test job. Change `--check test` to the real GitHub Actions job/context for your stack. Multiple `--check` arguments are supported. Without an explicit `--check`, `test` is the default. **Never use a dummy green test.**
+
+The creation wrapper calls `gh repo create` and immediately applies both rulesets, without clicking GitHub Settings. A `--dry-run` previews the command and the complete policies offline. If rule creation fails, the new repository is left in place with a prominent warning; it must not be used until protected.
 
 ```bash
-bash scripts/apply-rulesets.sh OWNER/REPO \
-  --check "Build, typecheck and test" \
-  --check "Smoke test"
+bash scripts/create-protected-repository.sh OWNER/new-private --profile private --template OWNER/my-project-template --dry-run
 ```
 
-Also require all pull-request conversations to be resolved:
+For an *existing* repository, use:
 
 ```bash
-bash scripts/apply-rulesets.sh OWNER/REPO \
-  --require-conversation-resolution \
-  --check "CI"
+bash scripts/apply-rulesets.sh OWNER/existing-public --profile public --check test
+bash scripts/apply-rulesets.sh OWNER/existing-private --profile private --check 'unit-tests'
 ```
 
-The helper refuses to continue when either standard ruleset name already exists, so it does not silently create duplicates.
+`apply-rulesets.sh` checks the repository's real visibility, requires an existing `main`, **refuses to overwrite an existing ruleset**, and verifies the resulting protection. To upgrade a repo that already has older rulesets, adjust those existing rules under Settings → Rules → Rulesets; do not create duplicates.
 
-## Policy details
+## Public and private profiles
 
-### `main protection - hard guardrails`
+Both profiles enforce identical security:
 
-- targets only `refs/heads/main`
-- blocks branch deletion
-- blocks non-fast-forward updates / force-pushes
-- contains no bypass actors
+- Active hard guardrails on `main`: no deletion or force-push, no bypass.
+- Active merge gates: PR required, 0 approvals (no unavailable second human reviewer), resolved discussions and no bypass.
+- At least one real passing GitHub Actions required check, bound to the GitHub Actions app (`integration_id: 15368`), with strict up-to-date enforcement.
+- The correct CI job depends on the actual application template. Green CI does not replace a Technical Lead review of the final code diff.
 
-### `main protection - merge gates`
+The profiles differ only in declared repository visibility. This is deliberate: private source deserves **at least** the same protection as public source. Protecting secrets, release credentials, dependencies and public license/disclosure obligations remain application-specific.
 
-- targets only `refs/heads/main`
-- requires a pull request
-- allows `Maintain` to bypass the merge gate
-- allows `Repository admin` to bypass the merge gate
-- contains no deletion or force-push rule
-- can include repository-specific required status checks
-- requires the branch to be up to date when status checks are supplied
+**Automatic for every newly created repository without running a command?** Not from a normal template in a personal `cemfirat/*` account. Use this one-command creation workflow. Alternatively, organization-wide GitHub rulesets can cover newly added repositories automatically when an eligible organization plan and ownership arrangement are chosen.
 
-The base template uses **0 required approvals**. It requires the pull-request path, but not an independent reviewer approval. Adjust that policy if your repository needs mandatory review.
-
-Conversation resolution is off in the base template and can be enabled with `--require-conversation-resolution`.
+Official references: [repo templates](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template), [repo rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [organization rulesets](https://docs.github.com/en/organizations/managing-organization-settings/creating-rulesets-for-repositories-in-your-organization).
 
 ## Safety
 
 The helper performs preflight checks before writing rulesets and attempts to roll back the hard-guardrail ruleset if creation of the merge-gate ruleset fails.
 
-Always review the generated payload with `--dry-run` before applying it to a repository you do not control.
+Always review the generated payload with `--dry-run` before applying it to a repository you do not control. The CLI must have repository administration rights; no authentication token is checked into this repository.
 
 Do not store tokens, credentials, private keys, customer data, or internal-only operational details in this repository.
 
