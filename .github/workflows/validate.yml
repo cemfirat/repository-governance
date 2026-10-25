@@ -33,6 +33,8 @@ jobs:
           scripts/wordpress-plugin-check-policy.py
           scripts/validate-wiki-handbook.py
           scripts/repository_setup.py
+          scripts/migrate_calendar_booking.py
+          tests/test_calendar_migration.py
           tests/test_repository_setup.py
           tests/test_wordpress_plugin_blueprint.py
           tests/test_wordpress_plugin_fleet.py
@@ -87,6 +89,9 @@ jobs:
 
       - name: Test safe repository setup (offline)
         run: python3 -m unittest discover -s tests -p 'test_repository_setup.py' -v
+
+      - name: Test legacy calendar migration (offline)
+        run: python3 -m unittest discover -s tests -p 'test_calendar_migration.py' -v
 
       - name: Exercise dry-run without GitHub authentication
         run: |

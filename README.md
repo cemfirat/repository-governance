@@ -49,6 +49,16 @@ Der zweite Befehl zeigt zunaechst alle betroffenen Projekte sowie deren konkrete
 `PRUEFEN`-Sonderfaelle (fehlende echte PR-CI, Forks, fremde Regeln, Sonderbranch) werden **nie automatisch korrigiert**, ebenso wenig bereits geschuetzte `OK`-Repos. Es gibt **keinen** `--yes`-Modus fuer die Sammelfunktion und in nichtinteraktiven Sitzungen wird nichts geschrieben. `./scripts/setup.sh --all` bleibt dauerhaft **streng nur lesend**. Danach mit `--all` den neuen Stand kontrollieren.
 
 
+### Gezielte WordPress-Sonderfaelle
+
+Einige WordPress-Repositories brauchen einen bewusst abgestimmten Ansatz statt eines pauschalen CI-Defaults:
+
+- **wordpress-widget-custom-css-classes:** Die vorhandenen neun echten PR-GitHub-Actions-Jobs aus drei Workflows (`Test`, `WordPress plugin blueprint`, `WordPress Plugin Check`) koennen gemeinsam vorgeschrieben werden. Der Setup-Helfer prueft dafuer nur erfolgreiche Jobs vom **selben PR-Commit**, ohne alte Commits oder fremde CI-Apps zu mischen. Im [Sonderfall-Handbuch](wiki/WordPress-Sonderregeln.md) stehen die neun genauen `--check`-Namen.
+- **wordpress-calendar-booking:** Besitzt bereits ein kombiniertes, speziell benanntes Ruleset mit **elf echten Pflichtchecks**. `setup.sh` ueberschreibt solche Sonderregeln **absichtlich nicht**. `python3 scripts/migrate_calendar_booking.py --dry-run` prueft eine eng auf dieses Repo begrenzte **In-place-Migration** (ohne duplizierte Rulesets). Nach ausdruecklicher interaktiver Zustimmung koennen damit die persoenliche Bypass-Ausnahme entfernt und verpflichtend geschlossene PR-Diskussionen aktiviert werden, wobei alle elf Checks unveraendert erhalten bleiben.
+- **Clickdummy-Projekte:** PR-Workflows muessen einen echten erfolgreichen `Verify`-Check liefern, bevor die Regeln gesetzt werden. Bei `kalkurama-clickdummy` kann ein Merge wegen `pages-preview.yml` ein Pages-Deployment ausloesen; ohne separate Deployment-Freigabe nicht mergen.
+
+**Keine** Sondermigration schreibt ohne interaktive Freigabe oder verändert fremde Repositories. Echte Anwendungstests und Ruleset-Wirksamkeit bleiben danach am konkreten PR zu validieren.
+
 **Kein weiteres Repository notwendig:** Alle Regeln und Werkzeuge bleiben zentral in `repository-governance`. Fuer ein vorhandenes GitHub-Repository:
 
 ```bash
