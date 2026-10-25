@@ -31,7 +31,28 @@ Das Tool liest die GitHub-Einstellungen und zeigt dir:
 
 Erfolg bedeutet: Pflicht-Pull-Requests, ein echter verpflichtender GitHub-Actions-Check (strikter aktueller Branch), aufgeloeste Code-Diskussionen, keine normalen Ausnahmen sowie Hard-Guardrails gegen Loeschen und Force-Push. `0` Pflicht-Approvals ist absichtlich korrekt, weil KI-Agenten entwickeln und ChatGPT als Technical Lead prueft. Es wird keine Fake-Review erzeugt.
 
-## 3. Erst alle Repositories pruefen (ohne Aenderungen)
+## 3. Alle sicheren Korrekturen auf einmal vornehmen
+
+Nach dem ersten Test an einem einzelnen Repository ist das der einfachste Weg fuer den Rest deiner Projekte:
+
+```bash
+./scripts/setup.sh --apply-safe-all --dry-run
+./scripts/setup.sh --apply-safe-all
+```
+
+Der erste Befehl zeigt nur die Vorschau. Der zweite zeigt dieselbe Art von Vorschau und fragt am Ende **einmalig** nach `ALLE N`, wobei `N` die angezeigte Anzahl ist. Ein normales `ja` reicht bewusst nicht aus. Das Tool nimmt danach die betroffenen Projekte nacheinander vor und prueft die gespeicherten GitHub-Regeln nach jedem Schreibvorgang.
+
+**Wichtig:** Nur `AENDERN`-Repos mit eindeutig sicherem Aenderungsplan werden aktualisiert. Alle als `PRUEFEN` eingestuften Repositories werden uebersprungen (z. B. fehlende echte CI, Sonderregeln, Forks, `develop`/`master`-Branches). Die Zuweisung wird vor jeder Aenderung erneut kontrolliert. Bei einem unerwarteten Fehler stoppt der Lauf; die zuvor erfolgreich gespeicherten Schutzregeln bleiben erhalten. Nach Fehlerklaerung kannst du den Befehl erneut ausfuehren. Der Sammelmodus unterstuetzt aus Sicherheitsgruenden kein `--yes` und keine nicht-interaktive Freigabe.
+
+Zum Abschluss:
+
+```bash
+./scripts/setup.sh --all
+```
+
+Dieser Kontrollbefehl aendert grundsaetzlich nichts. Er zeigt auch die verbliebenen Sonderfaelle an, die wir in Ruhe einzeln behandeln.
+
+## 4. Erst alle Repositories pruefen (ohne Aenderungen)
 
 ```bash
 ./scripts/setup.sh --all
