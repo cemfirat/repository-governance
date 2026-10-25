@@ -4,7 +4,7 @@ Diese Anleitung gehoert zu [Fleet-Aufgabe #41](https://github.com/cemfirat/repos
 
 ## wordpress-widget-custom-css-classes (mehrere Test-Workflows)
 
-Das Repository besitzt echte erfolgreiche PR-Tests auf dem gleichen PR-Commit (PR #11). Seine drei Workflows `test.yml`, `blueprint.yml` und `plugin-check.yml` laufen auf `pull_request` und enthalten zusammen **neun relevante GitHub-Actions-Jobs**. Keinen davon als Dummy ersetzen und keine nicht belegten Jobs verlangen.
+Das Repository besitzt echte erfolgreiche PR-Tests auf dem gleichen PR-Commit (PR #11). Die Workflows sind ebenfalls bereits auf **main** vorhanden und dort fuer Pull Requests aktiviert: Nur so duerfen sie spaeter als verpflichtende Merge-Gates gelten. Seine drei Workflows `test.yml`, `blueprint.yml` und `plugin-check.yml` laufen auf `pull_request` und enthalten zusammen **neun relevante GitHub-Actions-Jobs**. Keinen davon als Dummy ersetzen und keine nicht belegten Jobs verlangen.
 
 Erst nur die Vorschau anzeigen:
 
