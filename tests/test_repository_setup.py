@@ -1,4 +1,5 @@
 """Offline tests for the safe single-command GitHub repository setup."""
+import base64
 import copy
 import sys
 import unittest
@@ -39,6 +40,7 @@ class FakeGitHub:
         self.rules = {x["id"]: copy.deepcopy(x) for x in rules}
         self.ci = ci
         self.app = app
+        self.workflow_doc = "on:\n  pull_request:\n  push:\n"
         self.main_sha = "a" * 40
         self.classic = False
         self.writes = []
@@ -61,7 +63,13 @@ class FakeGitHub:
         if path == base + "/actions/runs?event=pull_request&per_page=30":
             return {"workflow_runs": [] if self.ci is None else [{
                 "id": 555, "head_sha": "b" * 40,
-                "event": "pull_request", "conclusion": "success"}]}
+                "event": "pull_request", "conclusion": "success",
+                "path": ".github/workflows/test.yml"}]}
+        if path == base + "/contents/.github/workflows/test.yml?ref=main":
+            if self.workflow_doc is None:
+                raise setup.SetupError("404 workflow not on main")
+            return {"encoding": "base64", "content": base64.b64encode(
+                self.workflow_doc.encode("utf-8")).decode("ascii")}
         if path == base + "/actions/runs/555/jobs?per_page=100":
             return {"jobs": [{"name": n, "conclusion": "success"} for n in self.ci],
                     "total_count": len(self.ci)}
@@ -381,11 +389,15 @@ class MultiWorkflowEvidenceFake(FakeGitHub):
         head = "b" * 40
         if path == base + "/actions/runs?event=pull_request&per_page=30":
             return {"workflow_runs": [
-                {"id": 301, "head_sha": head, "event": "pull_request", "conclusion": "success"},
-                {"id": 302, "head_sha": head, "event": "pull_request", "conclusion": "success"},
-                {"id": 303, "head_sha": head, "event": "pull_request", "conclusion": "success"},
-                {"id": 201, "head_sha": "c" * 40, "event": "pull_request", "conclusion": "success"},
+                {"id": 301, "head_sha": head, "event": "pull_request", "conclusion": "success", "path": ".github/workflows/test.yml"},
+                {"id": 302, "head_sha": head, "event": "pull_request", "conclusion": "success", "path": ".github/workflows/plugin-check.yml"},
+                {"id": 303, "head_sha": head, "event": "pull_request", "conclusion": "success", "path": ".github/workflows/blueprint.yml"},
+                {"id": 201, "head_sha": "c" * 40, "event": "pull_request", "conclusion": "success", "path": ".github/workflows/old.yml"},
             ]}
+        for f in ("plugin-check.yml", "blueprint.yml"):
+            if path == base + f"/contents/.github/workflows/{f}?ref=main":
+                return {"encoding": "base64", "content": base64.b64encode(
+                    b"on:\n  pull_request:\n").decode("ascii")}
         known = {
             301: "PHP 8.3 regression",
             302: "Official WordPress Plugin Check",
@@ -423,6 +435,67 @@ class MultiWorkflowEvidenceTests(unittest.TestCase):
         rejected = setup.inspect(gh, gh.name, requested_checks=["Outdated unrelated check"])
         self.assertTrue(rejected.blockers)
         self.assertEqual(rejected.actions, [])
+
+
+class ExistingMainWorkflowSafetyTests(unittest.TestCase):
+    def test_green_pr_on_unmerged_workflow_is_not_an_eligible_check(self):
+        gh = FakeGitHub(ci=("Verify",))
+        gh.workflow_doc = "on:\n  push:\n    branches: [verify/**]\n  workflow_dispatch:\n"
+        self.assertEqual(setup.successful_pr_checks(gh, gh.name), [])
+        plan = setup.inspect(gh, gh.name, requested_checks=["Verify"])
+        self.assertTrue(plan.blockers)
+        self.assertFalse(plan.actions)
+        self.assertEqual(gh.writes, [])
+
+    def test_absent_main_workflow_cannot_create_rulesets(self):
+        gh = FakeGitHub(ci=("Verify",))
+        gh.workflow_doc = None
+        plan = setup.inspect(gh, gh.name)
+        self.assertTrue(plan.blockers)
+        self.assertEqual(plan.actions, [])
+        self.assertEqual(gh.writes, [])
+
+    def test_main_branch_with_real_pr_trigger_is_accepted(self):
+        gh = FakeGitHub(ci=("Verify",))
+        gh.workflow_doc = "on:\n  push:\n    branches: [verify/**]\n  pull_request:\n    branches: [main]\n"
+        plan = setup.inspect(gh, gh.name)
+        self.assertFalse(plan.blockers)
+        self.assertEqual(
+            setup.required_checks(plan.actions[1].payload),
+            [{"context": "Verify", "integration_id": 15368}],
+        )
+
+    def test_conservative_yaml_trigger_recognition(self):
+        gh = FakeGitHub()
+        valid = [
+            "on:\n  pull_request:\n",
+            "'on':\n  pull_request:\n",
+            'on: [push, pull_request]\n',
+            "on:\n  push:\n  pull_request:\n    branches: [main]\n",
+        ]
+        invalid = [
+            "on:\n  push:\n    branches: [main]\n",
+            "# on:\n#   pull_request:\non:\n  push:\n",
+            "on:\n  push:\n    pull_request:\n",
+            "on: workflow_dispatch\n",
+        ]
+        for val in valid:
+            with self.subTest(val=val):
+                gh.workflow_doc = val
+                self.assertTrue(setup.main_branch_has_pr_workflow(
+                    gh, gh.name, ".github/workflows/test.yml"))
+        for val in invalid:
+            with self.subTest(val=val):
+                gh.workflow_doc = val
+                self.assertFalse(setup.main_branch_has_pr_workflow(
+                    gh, gh.name, ".github/workflows/test.yml"))
+
+    def test_traversal_or_wrong_workflow_path_cannot_be_trusted(self):
+        gh = FakeGitHub()
+        for path in ("../bad.yml", ".github/workflows/../bad.yml",
+                     ".github/workflows/test.txt", "https://evil.example/workflow.yml"):
+            with self.subTest(path=path):
+                self.assertFalse(setup.main_branch_has_pr_workflow(gh, gh.name, path))
 
 
 if __name__ == "__main__":

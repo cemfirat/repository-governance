@@ -8,6 +8,8 @@ external executable is the authenticated GitHub CLI (`gh`). Python stdlib only.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import copy
 import json
 import re
@@ -147,13 +149,58 @@ def verify_main_target(rule: dict[str, Any]) -> bool:
     )
 
 
+def main_branch_has_pr_workflow(client: GitHub, repo: str, path: str) -> bool:
+    """Fail-closed: PR success on an unmerged workflow cannot become mandatory.
+
+    Check the actual YAML file already present on main, not the workflow copied
+    into the PR branch. Recognise simple YAML 'on' syntaxes conservatively;
+    unusual formats require manual review rather than guessing.
+    """
+    if not re.fullmatch(r"\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml", path):
+        return False
+    try:
+        file = client.get(f"repos/{repo}/contents/{path}?ref=main")
+    except SetupError:
+        return False  # Missing on main or not accessible: never invent an eligible check.
+    if not isinstance(file, dict) or file.get("encoding") != "base64":
+        return False
+    try:
+        encoded = "".join(file.get("content", "").split())
+        yaml = base64.b64decode(encoded, validate=True).decode("utf-8")
+    except (ValueError, UnicodeError, binascii.Error, AttributeError):
+        return False
+    if len(yaml) > 200_000:
+        return False
+    lines = yaml.splitlines()
+    for i, raw in enumerate(lines):
+        cleaned = raw.split("#", 1)[0].rstrip()
+        m = re.fullmatch(r"""(?:on|'on'|"on")\s*:\s*(.*)""", cleaned)
+        if not m:
+            continue
+        # Top-level inline sequence (e.g. "on: [push, pull_request]").
+        if re.search(r"\bpull_request\b", m.group(1)):
+            return True
+        # Top-level mapping with a 2-space-indented pull_request key.
+        if m.group(1).strip():
+            return False
+        for following in lines[i + 1:]:
+            line = following.split("#", 1)[0].rstrip()
+            if not line.strip():
+                continue
+            if line[0] not in (" ", "\t"):
+                break
+            if re.match(r"""^  (?:pull_request|'pull_request'|"pull_request")\s*:""", line):
+                return True
+        return False
+    return False
+
+
 def successful_pr_checks(client: GitHub, repo: str) -> list[str]:
     """Prove job names using successful PR workflows on one identical commit SHA.
 
-    A PR may run several independent workflows (regressions, plugin-check,
-    blueprint). Collect their successful jobs together, never mixing results
-    from different commits, and corroborate each with GitHub Actions check-runs.
-    This is evidence of names, not proof of all future CI trigger conditions.
+    Aggregate successful jobs from independent workflows on one PR commit.
+    Only a workflow already configured for pull_request on main qualifies;
+    check every job against official GitHub Actions check-runs as well.
     """
     runs = client.get(f"repos/{repo}/actions/runs?event=pull_request&per_page=30")
     recent = runs.get("workflow_runs", [])
@@ -175,7 +222,13 @@ def successful_pr_checks(client: GitHub, repo: str) -> list[str]:
         return []
 
     passed_jobs: set[str] = set()
+    eligible_workflows: dict[str, bool] = {}
     for run in same_commit_runs:
+        path = run.get("path", "")
+        if path not in eligible_workflows:
+            eligible_workflows[path] = main_branch_has_pr_workflow(client, repo, path)
+        if not eligible_workflows[path]:
+            continue
         jobs = client.get(f"repos/{repo}/actions/runs/{run['id']}/jobs?per_page=100")
         if jobs.get("total_count", 0) > len(jobs.get("jobs", [])):
             raise SetupError("CI-Jobliste hat mehr als 100 Eintraege; manuell pruefen")
