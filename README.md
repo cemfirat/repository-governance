@@ -35,6 +35,20 @@ git pull --ff-only
 
 `--all` zeigt nur den Status deiner Repositories und aendert keine Einstellungen. **Nicht erneut klonen**, wenn dieser Ordner bereits existiert. Dieser Pfad ist ein persoenlicher Speicherort; auf einem anderen Mac kann er anders sein.
 
+### Alle sicher korrigierbaren Repositories in einem Durchgang aktualisieren
+
+Nach einer lesenden Pruefung mit `./scripts/setup.sh --all` kannst du **nur die eindeutig als `AENDERN` eingestuften Repositories gesammelt absichern**:
+
+```bash
+./scripts/setup.sh --apply-safe-all --dry-run  # Erst alles ansehen, garantiert nur lesend
+./scripts/setup.sh --apply-safe-all            # Einmal bestaetigen, dann einzeln verifiziert speichern
+```
+
+Der zweite Befehl zeigt zunaechst alle betroffenen Projekte sowie deren konkreten CI-Pflichtchecks und GitHub-Regeln. Danach musst du bewusst **`ALLE N`** eintippen, wobei `N` die aktuell angezeigte Zahl ist (z. B. `ALLE 9`). Ein einfaches `ja` reicht absichtlich nicht. Vor **jedem** Repository wird der vollstaendige Remote-Zustand neu geprueft und jede Aenderung nach dem Speichern verifiziert. Bei Abweichungen oder API-Fehlern **stoppt der gesamte Lauf**; vorher bereits erfolgreich gepruefte Korrekturen bleiben erhalten. Ein erneuter Aufruf ist nach der Fehlerklaerung sicher moeglich.
+
+`PRUEFEN`-Sonderfaelle (fehlende echte PR-CI, Forks, fremde Regeln, Sonderbranch) werden **nie automatisch korrigiert**, ebenso wenig bereits geschuetzte `OK`-Repos. Es gibt **keinen** `--yes`-Modus fuer die Sammelfunktion und in nichtinteraktiven Sitzungen wird nichts geschrieben. `./scripts/setup.sh --all` bleibt dauerhaft **streng nur lesend**. Danach mit `--all` den neuen Stand kontrollieren.
+
+
 **Kein weiteres Repository notwendig:** Alle Regeln und Werkzeuge bleiben zentral in `repository-governance`. Fuer ein vorhandenes GitHub-Repository:
 
 ```bash

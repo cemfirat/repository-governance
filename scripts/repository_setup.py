@@ -433,6 +433,100 @@ def apply_plan(client: GitHub, plan: Inspection, selected_checks: list[str] | No
     print(f"Einstellungen: https://github.com/{plan.name}/settings/rules")
 
 
+def preview_safe_batch(client: GitHub, owner: str) -> tuple[list[str], list[Inspection]]:
+    """Read-only fleet preflight; unrecognised or blocked repos never join the batch."""
+    names = client.list_owned_repositories(owner)
+    if len(names) != len(set(names)):
+        raise SetupError("Repository-Liste enthaelt Duplikate; keine Sammelaenderung")
+
+    plans: list[Inspection] = []
+    counts = {"OK": 0, "AENDERN": 0, "PRUEFEN": 0}
+    print(f"Sammel-Vorschau: {len(names)} Repositories; noch keine Aenderungen")
+    for name in names:
+        try:
+            plan = inspect(client, name)
+        except SetupError as exc:
+            counts["PRUEFEN"] += 1
+            print(f"PRUEFEN  {name:47} API-Fehler: {exc}")
+            continue
+        status = "PRUEFEN" if plan.blockers else "AENDERN" if plan.actions else "OK"
+        counts[status] += 1
+        print_plan(plan, compact=True)
+        if status == "AENDERN":
+            plans.append(plan)
+
+    print(
+        f"Ergebnis: {counts['OK']} OK, {counts['AENDERN']} sichere Kandidaten, "
+        f"{counts['PRUEFEN']} ausgeschlossen / einzeln pruefen."
+    )
+    if plans:
+        print("\nDETAILS der vorgesehenen Aenderungen (noch nichts gespeichert):")
+        for plan in plans:
+            print_plan(plan)
+    else:
+        print("Keine automatischen Aenderungen notwendig.")
+    return names, plans
+
+
+def apply_safe_batch(client: GitHub, owner: str, dry_run: bool = False) -> int:
+    """One deliberate authorisation for the safe subset, never a blind fleet write."""
+    names, plans = preview_safe_batch(client, owner)
+    if dry_run:
+        print("Nur Vorschau: Es wurde nichts veraendert.")
+        return 0
+    if not plans:
+        print("Es wurde nichts veraendert.")
+        return 0
+
+    if not sys.stdin.isatty():
+        print("Kein interaktives Terminal. Keine Sammelaenderung moeglich.")
+        print("Die Sammelfunktion akzeptiert absichtlich kein --yes.")
+        return 0
+
+    token = f"ALLE {len(plans)}"
+    answer = input(
+        f"\nWirklich genau diese {len(plans)} Repositories bearbeiten? "
+        f"Zur Bestaetigung exakt '{token}' eingeben: "
+    ).strip()
+    if answer != token:
+        print("Abgebrochen. Kein Repository wurde veraendert.")
+        return 0
+
+    # Guard against an owner-fleet change between inventory and approval.
+    if client.list_owned_repositories(owner) != names:
+        raise SetupError(
+            "Die Repository-Liste hat sich seit der Vorschau geaendert. "
+            "Noch keine Aenderung; bitte neu starten."
+        )
+
+    successful: list[str] = []
+    for index, plan in enumerate(plans, 1):
+        print(f"\n[{index}/{len(plans)}] {plan.name}")
+        try:
+            # apply_plan re-reads main, CI evidence and the exact ruleset state;
+            # each remote write is also individually verified after GitHub saves it.
+            apply_plan(client, plan, [])
+        except SetupError as exc:
+            print(
+                f"\nSTOP bei {plan.name}: {exc}\n"
+                f"Vorher erfolgreich: {len(successful)} von {len(plans)}. "
+                "Diese zuvor gespeicherten Schutzregeln bleiben bestehen.",
+                file=sys.stderr,
+            )
+            print(
+                "Nicht fortfahren; Ursache pruefen und spaeter die "
+                "Sammel-Vorschau neu starten.",
+                file=sys.stderr,
+            )
+            return 1
+        successful.append(plan.name)
+
+    print(f"\nFERTIG: {len(successful)} Repositories einzeln gespeichert und bei GitHub verifiziert.")
+    print("Die in der Vorschau als PRUEFEN markierten Sonderfaelle blieben unberuehrt.")
+    print("Zur abschliessenden Bestandsaufnahme: ./scripts/setup.sh --all")
+    return 0
+
+
 def cli(argv: list[str] | None = None, client: GitHub | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="GitHub-Repositories sicher pruefen und nach Bestaetigung schuetzen."
@@ -442,10 +536,22 @@ def cli(argv: list[str] | None = None, client: GitHub | None = None) -> int:
     parser.add_argument("--yes", action="store_true", help="Nach Vorschau bewusst ohne Rueckfrage ausfuehren")
     parser.add_argument("--check", action="append", default=[], metavar="NAME", help="Echten GitHub-Actions-Job angeben (mehrfach moeglich)")
     parser.add_argument("--all", action="store_true", help="Alle eigenen Repositories nur pruefen (nie aendern)")
-    parser.add_argument("--owner", help="Bei --all: GitHub-Kontoname")
+    parser.add_argument("--apply-safe-all", action="store_true", help="Sichere Repositories nach einmaliger ausdruecklicher Sammelbestaetigung anpassen")
+    parser.add_argument("--owner", help="Bei --all/--apply-safe-all: GitHub-Kontoname")
     args = parser.parse_args(argv)
     gh = client or GitHub()
     try:
+        if args.all and args.apply_safe_all:
+            raise SetupError("--all bleibt nur lesend; --apply-safe-all separat aufrufen")
+        if args.apply_safe_all:
+            if args.repository or args.yes or args.check:
+                raise SetupError(
+                    "--apply-safe-all kann nicht mit Repository, --yes oder --check kombiniert werden"
+                )
+            owner = args.owner or gh.get("user").get("login", "")
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", owner):
+                raise SetupError("Owner konnte nicht ermittelt werden; --owner USER angeben")
+            return apply_safe_batch(gh, owner, args.dry_run)
         if args.all:
             if args.repository or args.yes or args.check:
                 raise SetupError("--all ist eine reine Bestandsaufnahme, nicht mit Schreiboptionen kombinierbar")

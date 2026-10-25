@@ -2,7 +2,8 @@
 import copy
 import sys
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
+from unittest.mock import patch
 from io import StringIO
 from pathlib import Path
 
@@ -203,6 +204,174 @@ class SafeSetupTests(unittest.TestCase):
             self.assertEqual(setup.cli(["--all", "--owner", "cemfirat"], gh), 0)
         self.assertIn("ausschliesslich lesend", output.getvalue())
         self.assertEqual(gh.writes, [])
+
+
+class FleetFakeGitHub:
+    """Route mock GitHub API calls to independent pretend repositories."""
+    def __init__(self, children):
+        self.children = {child.name: child for child in children}
+
+    def get(self, path):
+        if path == "user":
+            return {"login": "cemfirat"}
+        for name, child in self.children.items():
+            if path == "repos/" + name or path.startswith("repos/" + name + "/"):
+                return child.get(path)
+        raise AssertionError("Unknown repository GET " + path)
+
+    def post(self, path, payload):
+        return self._write("post", path, payload)
+
+    def put(self, path, payload):
+        return self._write("put", path, payload)
+
+    def _write(self, verb, path, payload):
+        for name, child in self.children.items():
+            if path.startswith("repos/" + name + "/"):
+                return getattr(child, verb)(path, payload)
+        raise AssertionError("Unknown repository write " + path)
+
+    def list_owned_repositories(self, owner):
+        assert owner == "cemfirat"
+        return sorted(self.children)
+
+    def all_writes(self):
+        return {name: list(child.writes) for name, child in self.children.items()}
+
+
+def sample_fleet():
+    safe = FakeGitHub(rules=(
+        rule(setup.HARD_NAME, 11),
+        rule(setup.MERGE_NAME, 12, bypass=True)))
+    safe.name = "cemfirat/a-safe"
+    new = FakeGitHub(ci=("test",))
+    new.name = "cemfirat/b-new"
+    okay = FakeGitHub(rules=(
+        rule(setup.HARD_NAME, 13),
+        rule(setup.MERGE_NAME, 14)))
+    okay.name = "cemfirat/c-okay"
+    special = FakeGitHub(default="develop")
+    special.name = "cemfirat/d-special"
+    return FleetFakeGitHub((safe, new, okay, special))
+
+
+class SafeBatchTests(unittest.TestCase):
+    def test_fleet_preview_selects_only_safe_subset_and_is_read_only(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()) as out:
+            names, plans = setup.preview_safe_batch(gh, "cemfirat")
+        self.assertEqual(len(names), 4)
+        self.assertEqual([p.name for p in plans], ["cemfirat/a-safe", "cemfirat/b-new"])
+        self.assertIn("PRUEFEN", out.getvalue())
+        self.assertIn("Pflichtchecks: test", out.getvalue())
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_dry_run_never_writes_or_prompts(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()), patch("builtins.input", side_effect=AssertionError("prompt")):
+            result = setup.cli(["--apply-safe-all", "--dry-run"], gh)
+        self.assertEqual(result, 0)
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_typing_only_ja_does_not_authorize_batch(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()), patch("sys.stdin.isatty", return_value=True), \
+                patch("builtins.input", return_value="ja"):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertEqual(result, 0)
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_explicit_counted_approval_updates_only_two_repositories(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()) as out, patch("sys.stdin.isatty", return_value=True), \
+                patch("builtins.input", return_value="ALLE 2"):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertEqual(result, 0)
+        self.assertEqual(gh.children["cemfirat/a-safe"].writes, ["PUT"])
+        self.assertEqual(gh.children["cemfirat/b-new"].writes, ["POST", "POST"])
+        self.assertEqual(gh.children["cemfirat/c-okay"].writes, [])
+        self.assertEqual(gh.children["cemfirat/d-special"].writes, [])
+        self.assertIn("FERTIG: 2", out.getvalue())
+        self.assertEqual(gh.children["cemfirat/a-safe"].rules[12]["bypass_actors"], [])
+        self.assertEqual(
+            setup.required_checks(gh.children["cemfirat/a-safe"].rules[12]),
+            [{"context": "test", "integration_id": setup.GITHUB_ACTIONS_APP_ID}],
+        )
+
+    def test_non_interactive_always_refuses_writes(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()) as out, patch("sys.stdin.isatty", return_value=False), \
+                patch("builtins.input", side_effect=AssertionError("prompt")):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertEqual(result, 0)
+        self.assertIn("Kein interaktives Terminal", out.getvalue())
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_yes_and_other_unsafe_combinations_are_rejected(self):
+        for bad in (["--apply-safe-all", "--yes"],
+                    ["--apply-safe-all", "--check", "test"],
+                    ["--apply-safe-all", "cemfirat/example"],
+                    ["--apply-safe-all", "--all"]):
+            with self.subTest(bad=bad):
+                gh = sample_fleet()
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    result = setup.cli(bad, gh)
+                self.assertNotEqual(result, 0)
+                self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_fleet_changed_during_confirmation_aborts_all(self):
+        gh = sample_fleet()
+        old_list = gh.list_owned_repositories
+        calls = [0]
+        def changed_list(owner):
+            calls[0] += 1
+            items = old_list(owner)
+            if calls[0] == 2:
+                return items[:-1]
+            return items
+        gh.list_owned_repositories = changed_list
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()), \
+                patch("sys.stdin.isatty", return_value=True), \
+                patch("builtins.input", return_value="ALLE 2"):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertNotEqual(result, 0)
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_first_repo_race_stops_before_any_write(self):
+        gh = sample_fleet()
+        def race(_prompt):
+            gh.children["cemfirat/a-safe"].main_sha = "f" * 40
+            return "ALLE 2"
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()), \
+                patch("sys.stdin.isatty", return_value=True), \
+                patch("builtins.input", side_effect=race):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertEqual(result, 1)
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
+
+    def test_later_repo_race_stops_and_retains_only_verified_first(self):
+        gh = sample_fleet()
+        old_put = gh.children["cemfirat/a-safe"].put
+        def move_next_repo_on_first_put(path, payload):
+            result = old_put(path, payload)
+            gh.children["cemfirat/b-new"].main_sha = "f" * 40
+            return result
+        gh.children["cemfirat/a-safe"].put = move_next_repo_on_first_put
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()) as error, \
+                patch("sys.stdin.isatty", return_value=True), \
+                patch("builtins.input", return_value="ALLE 2"):
+            result = setup.cli(["--apply-safe-all"], gh)
+        self.assertEqual(result, 1)
+        self.assertEqual(gh.children["cemfirat/a-safe"].writes, ["PUT"])
+        self.assertEqual(gh.children["cemfirat/b-new"].writes, [])
+        self.assertIn("Vorher erfolgreich: 1 von 2", error.getvalue())
+
+    def test_all_command_is_still_strictly_read_only(self):
+        gh = sample_fleet()
+        with redirect_stdout(StringIO()), patch("builtins.input", side_effect=AssertionError("prompt")):
+            result = setup.cli(["--all"], gh)
+        self.assertEqual(result, 0)
+        self.assertTrue(all(not actions for actions in gh.all_writes().values()))
 
 
 if __name__ == "__main__":
