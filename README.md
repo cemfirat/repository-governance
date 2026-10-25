@@ -34,6 +34,7 @@ git pull --ff-only
 ```
 
 `--all` zeigt nur den Status deiner Repositories und aendert keine Einstellungen. **Nicht erneut klonen**, wenn dieser Ordner bereits existiert. Dieser Pfad ist ein persoenlicher Speicherort; auf einem anderen Mac kann er anders sein.
+
 **Kein weiteres Repository notwendig:** Alle Regeln und Werkzeuge bleiben zentral in `repository-governance`. Fuer ein vorhandenes GitHub-Repository:
 
 ```bash
