@@ -86,6 +86,14 @@ Das Werkzeug erkennt die Sichtbarkeit (public/private), bestehende Rulesets und 
 
 [Ausfuehrliche deutschsprachige Schritt-fuer-Schritt-Anleitung](wiki/Neue-Repositories-absichern.md).
 
+## Gemeinsame Projektfuehrung – fuer alle eigenen Repositories
+
+Der [projektuebergreifende Arbeitsstandard](standards/project-steering.md) legt verbindlich fest, wie Agenten und technische Auftragnehmer **Projektziele, bereits beschlossene Entscheidungen, exakte Code-/Release-/Betriebsnachweise und Abnahmen** nachvollziehbar fuehren. Das ist ein eigener Vertrag neben den vorhandenen GitHub-Rulesets: **Gruene CI beweist keine Live-Installation oder Produktabnahme**.
+
+Die [Vorlage fuer einen datierten PROJECT-STATUS](templates/PROJECT-STATUS.md) wird nur nach Pruefung der strengeren projektspezifischen Regeln eingesetzt. Die vollstaendige Inventur aller eigenen Repositories wird **nicht** in diesem oeffentlichen Governance-Repository gespeichert, sondern im privaten Projektportfolio des Owners. Forks und fremde Upstream-Projekte bleiben Referenzen; keine automatische Dateiaenderung in allen Repos.
+
+**Ausfuehrung:** erst die vorhandenen Produkt- und Repo-Regeln lesen; keine PR vor gruener Branch-CI; unabhängige PR-CI; exakte Tree-Pruefung; separat verifiziertes Release, Deployment und sichtbare Abnahme. Bestehende WordPress-Blueprints und Sonder-Rulesets bleiben unveraendert.
+
 ## Repository layout
 
 - `rulesets/main-protection-hard-guardrails.json`  
